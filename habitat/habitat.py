@@ -164,52 +164,5 @@ class Habitat():
         return "%s: %s" % (self.sitecode, self.name)
     
 if __name__ == '__main__':
-    
-    import csv
-    import pickle
-    
-    csv_src = r"D:\dev\python\geo\habitat\data\_ffh_types.csv"
-    pkl_src = r"ffh_types.pkl"
-
-    # defining constants, these are the column headers in the csv-file used
-    # as source for habitat type data
-    N2000_KEY = 'N2000 code'
-    N2000_NAME = 'Name of the habitat type'
-    N2000_NAME_DE = 'Name des Habitattyps'
-    N2000_PRIORITY = 'Priority'
-    N2000_SHORTNAME = 'Shortname'
-    N2000_SPECIES = 'Characteristic plant species [EUNIS]'
-    
-    reader = csv.DictReader(open(csv_src, 'rb'), delimiter = ';')
-
-    # defining dictionary to hold habitat type data
-    ffh_types = dict()
-    for row in reader:
-        # retrieving N2000 code
-        n2000_code = row[N2000_KEY]
-        
-        # creating new habitat type
-        ht = HabitatType(n2000_code, row[N2000_NAME], row[N2000_SHORTNAME])
-        # adding german translation
-        ht.add_translation('de', row[N2000_NAME_DE])
-        
-        species = row[N2000_SPECIES].split(", ")
-        [ht.add_characteristic_species(Species(sp)) for sp in species]
-        
-        #ht.add_characteristic_species()
-        # setting priority
-        if row[N2000_PRIORITY]:
-            ht.set_priority()
-        # adding habitat type to dictionary of habitat types
-        ffh_types[n2000_code] = ht
-    else:
-        ht = ffh_types['6520']
-        print ht
-        print [cs.name for cs in ht.characteristic_species]
-        print "Done"
-
-    # dumping dictionary of habitat type data to external file
-    print "Dumping habitat type data to %s..." % pkl_src,
-    pickle.dump(ffh_types, open(pkl_src, 'wb'))
-    print "Done"
+    pass
 
