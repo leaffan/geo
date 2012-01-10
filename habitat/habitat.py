@@ -10,18 +10,25 @@ u"""
 ... Put description here ...
 """
 
+from urlparse import urlparse
+
 from osgeo import ogr
 from shapely.geometry import Point, LineString, Polygon
 from shapely.wkb import loads
 from shapely.ops import linemerge
 
 class Species():
+    
+    TAXA = ['Kingdom', 'Phylum', 'Class', 'Subclass', 'Order', 'Family', 'Genus']
+    
     def __init__(self, name):
         self.set_name(name)
         self.synonyms = set()
         self.translations = dict()
         self.associated_habitat_types = list()
-        self.url = ''
+        self.urls = dict()
+        self.taxonomic_information = dict()
+        self.author = ''
     
     def set_name(self, name, synonym = False):
         if synonym:
@@ -30,13 +37,57 @@ class Species():
         self.name = name
     
     def set_url(self, url):
-        self.url = url
+        parsed_url = urlparse(url)
+        self.urls[parsed_url.hostname] = url
     
     def add_translation(self, lang, name):
         self.translations[lang.lower()] = name
     
     def set_associated_habitat_type(self, habitat_type):
         self.associated_habitat_types.append(habitat_type)
+    
+    def set_taxonomic_information(self, tax_dict):
+        for key in tax_dict:
+            if key in self.TAXA:
+                self.taxonomic_information[key] = tax_dict[key]
+
+    def print_taxonomic_information(self):
+        i = 2
+        for t in self.TAXA:
+            if self.taxonomic_information.has_key(t):
+                print "%s%s: %s" % (i * ' ',t, self.taxonomic_information[t])
+                i += 2
+
+    def print_species_data(self):
+        print "Species name: %s" % (self.name)
+        print "  Author: %s" % (self.author)
+        self.print_taxonomic_information()
+        print "  URL(s):"
+        for host in self.urls:
+            print "    [%s] : %s" % (host, self.urls[host])
+
+    def is_plant(self):
+        if not self.taxonomic_information:
+            return None
+        if not self.taxonomic_information.has_key('Kingdom'):
+            return None
+        if self.taxonomic_information['Kingdom'].lower() == "plantae":
+            return True
+        else:
+            return False
+    
+    def is_animal(self):
+        if not self.taxonomic_information:
+            return None
+        if not self.taxonomic_information.has_key('Kingdom'):
+            return None
+        if self.taxonomic_information['Kingdom'].lower() == "animalia":
+            return True
+        else:
+            return False
+
+    def set_author(self, author):
+        self.author = author
     
     def __str__(self):
         return self.name
@@ -103,16 +154,30 @@ class HabitatType():
         return result
 
 class Habitat():
+    
+    BIOGEOGRAPHICAL_REGIONS = {
+        1 : "alpine",
+        2 : "atlantic",
+        3 : "continental",
+        4 : "anatolian",
+        5 : "arctic",
+        6 : "black sea",
+        7 : "boreal",
+        8 : "mediterranean",
+        9 : "pannonian",
+        10 : "steppic",
+    }
+    
     def __init__(self, sitecode, name = ''):
         self.sitecode = sitecode
         self.set_name(name)
         self.description = None
         self.region = None
-        self.fed_state = None
+        self.nuts_code = None
         self.size = 0
         self.habitat_types = list()
         self.species = list()
-        self.url = ''
+        self.urls = dict()
         self.geometry = None
 
     def set_name(self, name):
@@ -121,14 +186,15 @@ class Habitat():
     def set_region(self, region):
         self.region = region
         
-    def set_fed_state(self, fed_state):
-        self.fed_state = fed_state
+    def set_administrative_area(self, nuts_code):
+        self.nuts_code = nuts_code
 
     def set_size(self, size):
         self.size = size
 
     def set_url(self, url):
-        self.url = url
+        parsed_url = urlparse(url)
+        self.urls[parsed_url.hostname] = url
 
     def set_description(self, description):
         self.description = description
@@ -147,21 +213,86 @@ class Habitat():
 
     def print_habitat_data(self):
         print self
-        print "  Beschreibung: %s" % self.description
-        print "  BGR: %s " % self.region
-        print "  Größe: %.2f ha" % self.size
+        print "  Description: %s" % self.description
+        print "  BGR: %s " % self.BIOGEOGRAPHICAL_REGIONS[self.region]
+        print "  Size: %.2f ha" % self.size
         #print "  Subhabitate: %d" % len(self.sub_habitats)
-        print "  Bundesland: %s" % self.fed_state
-        print "  Habitattypen:"
+        print "  Administrative unit (NUTS-Code): %s" % self.nuts_code
+        print "  Available Habitat types:"
         for ht in self.habitat_types:
             print "    %s" % ht
-        print "  Arten:"
+        print "  Available (plant) species:"
         for sp in self.species:
+            if not sp.is_plant():
+                continue
             print "    %s" % sp
-        print "  URL: %s" % self.url
+        print "  URL(s):"
+        for host in self.urls:
+            print "    [%s] : %s" % (host, self.urls[host])
 
     def __str__(self):
         return "%s: %s" % (self.sitecode, self.name)
+
+def retrieve_taxonomic_information(species):
+    import os
+    import pickle
+    import urllib2
+    import lxml.html
+
+    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&scientificName="
+    URL_SUFFIX = r"&searchSynonyms=true&submit=Search"
+    SPECIES_PKL_TGT = r"data\_eunis_species.pkl"
+
+    # restoring available species data from pickle file
+    if os.path.exists(SPECIES_PKL_TGT):
+        #print "Restoring species area data from %s..." % (hab_area_pkl_tgt),
+        species_data = pickle.load(open(SPECIES_PKL_TGT))
+        #print "Done"
+    else:
+        # otherwise creating a new dictionary to contain habitat data
+        species_data = dict()
+
+    if species_data.has_key(species.name):
+        return species_data[species.name]
+
+    url_query_pt = "+".join(species.name.lower().split())
+    query_url = "".join((URL_PREFIX, url_query_pt, URL_SUFFIX))
+
+    search_conn = urllib2.urlopen(query_url)
+    search_doc = lxml.html.parse(search_conn).getroot().get_element_by_id('content')
+    search_doc.make_links_absolute()
+
+    search_results = search_doc.xpath("//table[@summary='Search results']/tbody/tr")
+
+    for row in search_results:
+        species_element = row.xpath("./td/a")[0]
+        species_url = species_element.attrib['href']
+        species_name = species_element.text_content().strip()
+        if 'check_green.gif' in row.xpath("./td/img")[0].attrib['src']:
+            species_conn = urllib2.urlopen(species_url)
+            species_doc = lxml.html.parse(species_conn).getroot().get_element_by_id('content')
+            species_doc.make_links_absolute()
+            
+            author = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2].text.strip()
+
+            tax_info = species_doc.xpath("//table[@class='datatable fullwidth'][2]/tbody/tr")
+            tax_dict = dict()
+            
+            for row in tax_info:
+                level = row.xpath("./td")[0].text_content().strip()
+                info = row.xpath("./td")[1].text_content().strip()
+                tax_dict[level] = info
+
+            species.set_taxonomic_information(tax_dict)
+            species.set_author(author)
+            species.set_url(species_url)
+            
+            #tax_rank = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip()
+            
+            species_data[species.name] = species
+            pickle.dump(species_data, open(SPECIES_PKL_TGT, 'wb'))
+            
+            return species
     
 if __name__ == '__main__':
     pass
