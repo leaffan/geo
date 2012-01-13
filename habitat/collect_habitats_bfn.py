@@ -160,7 +160,6 @@ if __name__ == '__main__':
             for link in contents.iterlinks():
                 if link[0].find_class('linkint'):
                     key = link[0].text_content().encode('utf-8')
-                    
                     if not len(key) == 4:
                         sp = Species(key)
                         retrieve_taxonomic_information(sp)  

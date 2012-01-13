@@ -60,7 +60,7 @@ class Species():
 
     def print_species_data(self):
         print "Species name: %s" % (self.name)
-        print "  Author: %s" % (self.author)
+        print "  Author: %s" % (self.author.encode('utf-8'))
         self.print_taxonomic_information()
         print "  URL(s):"
         for host in self.urls:
@@ -233,30 +233,24 @@ class Habitat():
     def __str__(self):
         return "%s: %s" % (self.sitecode, self.name)
 
-def retrieve_taxonomic_information(species):
-    import os
-    import pickle
+def get_taxonomic_information(species_name, verbose = False):
+    u"""
+    Retrieve taxonomic information for the given species name using the EUNIS
+    database. Returns a species object with a subset of information available
+    from EUNIS, including author and taxonomic information.
+    """
+    
     import urllib2
     import lxml.html
-
+    
     URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&scientificName="
-    URL_SUFFIX = r"&searchSynonyms=true&submit=Search"
-    SPECIES_PKL_TGT = r"data\_eunis_species.pkl"
+    URL_SUFFIX = r"&submit=Search"
 
-    # restoring available species data from pickle file
-    if os.path.exists(SPECIES_PKL_TGT):
-        #print "Restoring species area data from %s..." % (hab_area_pkl_tgt),
-        species_data = pickle.load(open(SPECIES_PKL_TGT))
-        #print "Done"
-    else:
-        # otherwise creating a new dictionary to contain habitat data
-        species_data = dict()
-
-    if species_data.has_key(species.name):
-        return species_data[species.name]
-
-    url_query_pt = "+".join(species.name.lower().split())
+    url_query_pt = "+".join(species_name.split())
     query_url = "".join((URL_PREFIX, url_query_pt, URL_SUFFIX))
+
+    if verbose:
+        print query_url
 
     search_conn = urllib2.urlopen(query_url)
     search_doc = lxml.html.parse(search_conn).getroot().get_element_by_id('content')
@@ -267,13 +261,26 @@ def retrieve_taxonomic_information(species):
     for row in search_results:
         species_element = row.xpath("./td/a")[0]
         species_url = species_element.attrib['href']
-        species_name = species_element.text_content().strip()
+        found_species_name = species_element.text_content().strip()
         if 'check_green.gif' in row.xpath("./td/img")[0].attrib['src']:
+            if verbose:
+                print found_species_name, species_url
+            #if found_species_name != species_name:
+            #    print "!!!: %s <-> %s" % (species_name, found_species_name)
             species_conn = urllib2.urlopen(species_url)
             species_doc = lxml.html.parse(species_conn).getroot().get_element_by_id('content')
             species_doc.make_links_absolute()
             
-            author = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2].text.strip()
+            taxonomic_rank = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip().lower()
+            
+            if taxonomic_rank.lower() != "species":
+                return None
+            
+            author_info = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2]
+            if not author_info.text is None:
+                author = author_info.text.strip()
+            else:
+                author = ''
 
             tax_info = species_doc.xpath("//table[@class='datatable fullwidth'][2]/tbody/tr")
             tax_dict = dict()
@@ -283,17 +290,16 @@ def retrieve_taxonomic_information(species):
                 info = row.xpath("./td")[1].text_content().strip()
                 tax_dict[level] = info
 
+            species = Species(species_name)
             species.set_taxonomic_information(tax_dict)
             species.set_author(author)
             species.set_url(species_url)
-            
-            #tax_rank = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip()
-            
-            species_data[species.name] = species
-            pickle.dump(species_data, open(SPECIES_PKL_TGT, 'wb'))
-            
-            return species
-    
-if __name__ == '__main__':
-    pass
 
+            if verbose:
+                species.print_species_data()
+
+            return species
+
+if __name__ == '__main__':
+    
+    pass
