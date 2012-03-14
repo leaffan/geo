@@ -16,7 +16,7 @@ import os
 import pickle
 
 from habitat import Species
-from habitat import get_taxonomic_information
+from habitat import get_taxonomic_information, find_valid_name
 
 def collect_species_data(species_name, pkl_tgt = '', verbose = False):
     
@@ -36,7 +36,7 @@ def collect_species_data(species_name, pkl_tgt = '', verbose = False):
                 print "Taxonomic information for '%s' already available..." % species_name
                 return
 
-    species = get_taxonomic_information(species_name)
+    species = get_taxonomic_information(species_name, verbose)
     
     if verbose:
         species.print_species_data()
@@ -60,8 +60,22 @@ if __name__ == '__main__':
     # output data target
     sps_pkl_tgt = r"data\_eunis_species.pkl"
 
-    sps_src = r"D:\tmp\sps.txt"
+    sps_src = r"/Users/markus/_tmp/veg_wh_beide.txt"
     lines = open(sps_src).readlines()
-    for line in lines:
+    
+    #lines = ['Agropyron repens', 'Elymus repens']
+    
+    for line in lines[:]:
+        scientific_name = line.strip()
+        #print line.strip()
+        #print ":::::::::::"
+        valid_name = find_valid_name(scientific_name.strip())
+        
+        if valid_name != scientific_name:
+            print "%s --> %s" % (scientific_name, valid_name)
+        else:
+            print scientific_name
+        
         #collect_species_data(line.strip(), pkl_tgt = sps_pkl_tgt, verbose = True)
-        sp = collect_species_data(line.strip())
+        #sp = collect_species_data(line.strip(), '', True)
+        #sp.print_species_data()

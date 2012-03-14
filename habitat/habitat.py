@@ -23,6 +23,7 @@ class Species():
     
     def __init__(self, name):
         self.set_name(name)
+        self.is_synonym = ''
         self.synonyms = set()
         self.translations = dict()
         self.associated_habitat_types = list()
@@ -35,6 +36,12 @@ class Species():
             self.synonyms.add(synonym)
             return
         self.name = name
+    
+    def set_synonym(self, is_synonym):
+        if is_synonym:
+            self.is_synonym = True
+        else:
+            self.is_synonym = False
     
     def set_url(self, url):
         parsed_url = urlparse(url)
@@ -233,6 +240,73 @@ class Habitat():
     def __str__(self):
         return "%s: %s" % (self.sitecode, self.name)
 
+def find_valid_name(synonym, verbose = False):
+    import urllib2
+    import lxml.html
+    
+    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&searchSynonyms=true&scientificName=Agropyron+repens"
+    URL_SUFFIX = "&submit=Search"
+
+    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showGroup=true&showFamily=true&showOrder=true&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&searchSynonyms=True&submit=Search&scientificName="
+    
+    url_query_pt = "+".join(synonym.split())
+    query_url = "".join((URL_PREFIX, url_query_pt))
+    
+    query_conn = urllib2.urlopen(query_url)
+    query_doc = lxml.html.parse(query_conn).getroot().get_element_by_id('content')
+    query_doc.make_links_absolute()
+
+    search_results = query_doc.xpath("//table[@summary='Search results']/tbody/tr")
+
+    found_species_name, added_text, tgt_url = retrieve_name_from_search_result_row(search_results[0])
+
+    if found_species_name.lower() == synonym.lower():
+        if not added_text:
+            if verbose:
+                print "'%s' is a valid species name: [%s]" % (synonym, tgt_url)
+            valid_name = synonym
+        elif added_text.lower() == '(synonym)':
+            valid_name = retrieve_valid_name_for_synonym(synonym, tgt_url, verbose)
+        else:
+            if verbose:
+                print "'%s' is a %s: [%s]" % (synonym, added_text, tgt_url)
+            valid_name = synonym
+    else:
+        if verbose:
+            print "Best match for '%s': '%s' %s [%s]" % (synonym, found_species_name, added_text, tgt_url)
+        valid_name = find_valid_name(found_species_name)
+
+    return valid_name
+
+def retrieve_valid_name_for_synonym(synonym, url, verbose = False):
+    import urllib2
+    import lxml.html
+    
+    conn = urllib2.urlopen(url)
+    doc = lxml.html.parse(conn).getroot().get_element_by_id('content')
+    doc.make_links_absolute()
+
+    heading = doc.xpath("//h1[@class='documentFirstHeading']")[0]
+    potential_valid_name = heading.xpath("./span/a/strong")[0].text_content().strip()
+    tgt_url = heading.xpath("./span/a")[0].attrib['href']
+
+    if verbose:
+        print "'%s' is a synonym of '%s': [%s]" % (synonym, potential_valid_name, tgt_url)
+    
+    valid_name = find_valid_name(potential_valid_name, verbose)
+    return valid_name
+
+    #print heading.text_content().encode('utf-8').strip()
+    #print valid_name.text_content().strip()
+
+def retrieve_name_from_search_result_row(row):
+    species_element = row.xpath("./td")[3]
+    name_element = species_element.xpath("./a")[0]
+    tgt_url = species_element.xpath("./a")[0].attrib['href']
+    found_species_name = name_element.text_content().strip()
+    added_text = name_element.tail.strip()
+    return found_species_name, added_text, tgt_url
+
 def get_taxonomic_information(species_name, verbose = False):
     u"""
     Retrieve taxonomic information for the given species name using the EUNIS
@@ -273,6 +347,7 @@ def get_taxonomic_information(species_name, verbose = False):
             
             taxonomic_rank = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip().lower()
             
+            print taxonomic_rank
             if taxonomic_rank.lower() != "species":
                 return None
             
