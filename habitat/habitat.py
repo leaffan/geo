@@ -10,6 +10,10 @@ u"""
 ... Put description here ...
 """
 
+import urllib2
+import lxml.html
+import Levenshtein
+
 from urlparse import urlparse
 
 from osgeo import ogr
@@ -240,14 +244,129 @@ class Habitat():
     def __str__(self):
         return "%s: %s" % (self.sitecode, self.name)
 
+class SpeciesFinder():
+    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&pageSize=300&showGroup=true&showFamily=true&showOrder=true&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=2&searchSynonyms=True&submit=Search&scientificName="
+
+    def __init__(self, search_name = ''):
+        self.search_name = search_name
+    
+    def set_search_name(self, search_name):
+        self.search_name = search_name
+    
+    def find_species(self):
+        if not self.search_name:
+            return None
+
+        query_str = "+".join(self.search_name.split())
+        query_url = "".join((self.URL_PREFIX, query_str))
+        query_conn = urllib2.urlopen(query_url)
+
+        self.query_doc = lxml.html.parse(query_conn).getroot().get_element_by_id('content')
+        self.query_doc.make_links_absolute()
+        
+        search_results = self.query_doc.xpath("//table[@summary='Search results']/tbody/tr")
+        
+        if len(search_results) > 1:
+            (sp_name, sp_type, sp_url), similarity = self.find_best_match(search_results)
+            print "Best match for '%s': '%s' %s [%s]" % (self.search_name, sp_name, sp_type, sp_url)
+        else:
+            (sp_name, sp_type, sp_url) = self.get_species_info_from_row(search_results[0])
+
+        if sp_type.lower() == "(synonym)":
+            sp_name, sp_url = self.find_valid_name_for_synonym(sp_name, sp_url)
+        elif sp_type:
+            print
+            print sp_type
+            print
+
+        self.species = Species(sp_name)
+        self.species.set_url(sp_url)
+        #self.get_species_data()
+    
+    def find_valid_name_for_synonym(self, synonym, synonym_url):
+        species_conn = urllib2.urlopen(synonym_url)
+        self.species_doc = lxml.html.parse(species_conn).getroot().get_element_by_id('content')
+        self.species_doc.make_links_absolute()
+
+        heading = self.species_doc.xpath("//h1[@class='documentFirstHeading']")[0]
+        valid_name = heading.xpath("./span/a/strong")[0].text_content().strip()
+        tgt_url = heading.xpath("./span/a")[0].attrib['href']
+
+        author_info = self.species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2]
+        if not author_info.text is None:
+            author = author_info.text.strip()
+        else:
+            author = ''
+
+        print "'%s' (%s) is a synonym of '%s': [%s]" % (synonym, author, valid_name, tgt_url)
+        
+        return valid_name, tgt_url
+    
+    def find_species_column(self):
+        table_header = self.query_doc.xpath("//table[@summary='Search results']/thead/tr/th")
+        i = 0
+        for th in table_header:
+            if th.text_content().strip() == 'Scientific name':
+                idx = i
+                break
+            i += 1
+        return idx
+    
+    def get_species_data(self):
+        species_conn = urllib2.urlopen(self.species.urls['eunis.eea.europa.eu'])
+        self.species_doc = lxml.html.parse(species_conn).getroot().get_element_by_id('content')
+        self.species_doc.make_links_absolute()
+
+        taxonomic_rank = self.species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip().lower()
+            
+        author_info = self.species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2]
+        if not author_info.text is None:
+            author = author_info.text.strip()
+        else:
+            author = ''
+
+        tax_info = self.species_doc.xpath("//table[@class='datatable fullwidth'][2]/tbody/tr")
+        tax_dict = dict()
+            
+        for row in tax_info:
+            level = row.xpath("./td")[0].text_content().strip()
+            info = row.xpath("./td")[1].text_content().strip()
+            tax_dict[level] = info        
+
+        self.species.set_taxonomic_information(tax_dict)
+        self.species.set_author(author)
+        self.species.print_species_data()
+    
+    def get_species_info_from_row(self, row):
+        idx = self.find_species_column()
+        species_element = row.xpath("./td")[idx]
+        species_link_element = species_element.xpath("./a")[0]
+        
+        sp_url = species_element.xpath("./a")[0].attrib['href']
+        sp_name = species_link_element.text_content().strip()
+        sp_type = species_link_element.tail.strip()
+        
+        return sp_name, sp_type, sp_url
+    
+    def find_best_match(self, search_results):
+        best_match = ((), -1.0)        
+        idx = self.find_species_column()
+        for row in search_results:
+            sp_name, sp_type, sp_url = self.get_species_info_from_row(row)
+            ratio = Levenshtein.ratio(self.search_name, sp_name)
+            if ratio > best_match[-1]:
+                best_match = ((sp_name, sp_type, sp_url), ratio)
+            elif ratio == best_match[-1]:
+                if not sp_type:
+                    best_match = ((sp_name, sp_type, sp_url), ratio)
+        else:
+            return best_match
+
 def find_valid_name(synonym, verbose = False):
     import urllib2
     import lxml.html
     
-    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&searchSynonyms=true&scientificName=Agropyron+repens"
-    URL_SUFFIX = "&submit=Search"
-
-    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showGroup=true&showFamily=true&showOrder=true&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=3&searchSynonyms=True&submit=Search&scientificName="
+    URL_PREFIX = r"http://eunis.eea.europa.eu/species-names-result.jsp?typeForm=0&showGroup=true&showFamily=true&showOrder=true&showScientificName=true&searchVernacular=false&sort=3&ascendency=1&showValidName=true&relationOp=2&searchSynonyms=True&submit=Search&scientificName="
     
     url_query_pt = "+".join(synonym.split())
     query_url = "".join((URL_PREFIX, url_query_pt))
@@ -290,11 +409,17 @@ def retrieve_valid_name_for_synonym(synonym, url, verbose = False):
     potential_valid_name = heading.xpath("./span/a/strong")[0].text_content().strip()
     tgt_url = heading.xpath("./span/a")[0].attrib['href']
 
+    author_info = doc.xpath("//table[@class='datatable fullwidth']/tr/td")[2]
+    if not author_info.text is None:
+        author = author_info.text.strip()
+    else:
+        author = ''
+
     if verbose:
         print "'%s' is a synonym of '%s': [%s]" % (synonym, potential_valid_name, tgt_url)
     
     valid_name = find_valid_name(potential_valid_name, verbose)
-    return valid_name
+    return valid_name, author
 
     #print heading.text_content().encode('utf-8').strip()
     #print valid_name.text_content().strip()

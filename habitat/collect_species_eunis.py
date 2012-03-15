@@ -61,9 +61,8 @@ if __name__ == '__main__':
     sps_pkl_tgt = r"data\_eunis_species.pkl"
 
     sps_src = r"/Users/markus/_tmp/veg_wh_beide.txt"
+    sps_src = r"N:\work\veg_wh_beide.txt"
     lines = open(sps_src).readlines()
-    
-    #lines = ['Agropyron repens', 'Elymus repens']
     
     for line in lines[:]:
         scientific_name = line.strip()
