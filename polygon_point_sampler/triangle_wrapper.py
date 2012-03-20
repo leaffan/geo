@@ -15,7 +15,10 @@ import tempfile
 
 from subprocess import Popen, PIPE
 
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
+from shapely.ops import linemerge
+
+from remote_ssh_client import RemoteSSHClient
 
 class TriangleWrapper():
 
@@ -25,11 +28,11 @@ class TriangleWrapper():
     NODE_SUFFIX = '.1.node'
     ELE_SUFFIX = '.1.ele'
     
-    def __init__(self, triangle_bin = r"triangle\triangle.exe"):
+    def __init__(self, local_triangle_bin = r"triangle\triangle"):
         u"""
         Initialize a new instance of TriangleWrapper.
         """
-        self.triangle_bin = '"' + triangle_bin + '"'
+        self.triangle_bin = '"' + local_triangle_bin + '"'
         self.tmp_files = list()
         self.vertex_cnt = 0
 
@@ -40,7 +43,7 @@ class TriangleWrapper():
         self.py = polygon
         self.basename = ''
 
-    def create_poly_data(self):
+    def convert_poly_data(self):
         u"""
         Collect polygon data in a data structure according to Triangle's
         requirements. Polygon outlines and inner holes are treated the same -
@@ -96,6 +99,7 @@ class TriangleWrapper():
         # putting all lines together
         tgt.write("\n".join(output))
         tgt.close()
+        self.poly_src = tmp_name
         return tmp_name
 
     def read_node_file(self, node_src = ''):
@@ -138,7 +142,7 @@ class TriangleWrapper():
         self.triangles = list()
         self.circumcenters = list()
 
-        # reading lines
+        # reading lines from *.ele file
         lines = open(ele_src).readlines()
         # retrieving triangle count
         triangle_cnt = int(lines.pop(0).split()[0])
@@ -155,12 +159,15 @@ class TriangleWrapper():
             tokens = line.split()
             # retrieving triangle id, and node indices constructing the triangle
             i, a, b, c = [int(x) for x in tokens]
+            # setting up corresponding entry in shared node dictionary
             for node in (a, b, c):
                 if not shared_nodes.has_key(node):
                     shared_nodes[node] = list()
-            # adding node indices to shared nodes lists
+            # adding triangle index for each node to lists of shared nodes
             [shared_nodes[k].append(i) for k in a, b, c]
             # retrieving node coordinates
+            # NB: pay attention NOT to use the -z command line switch that alters
+            # Triangle's way of enumerating elements starting with zero
             aa = self.nodes[a - 1]
             bb = self.nodes[b - 1]
             cc = self.nodes[c - 1]
@@ -175,10 +182,41 @@ class TriangleWrapper():
             # shared nodes
             self.retrieve_shared_edges(shared_nodes)
 
+    def create_skeleton_line(self, simplify = True):
+        u"""
+        Create a skeleton line of the polygon by using the circumcenters of the
+        triangles created by the Conforming Delaunay Triangulation applied by
+        Triangle
+        Optionally simplify (by default) the skeleton by using an algorithm
+        provided by Shapely.
+        """
+        # list of skeleton segments
+        skel_segments = list()
+        for key in sorted(self.shared_edges.iterkeys()):
+            if self.shared_edges[key] != 2:
+                continue
+            # retrieve endpoints of the skeleton segment
+            from_pt = self.circumcenters[key[0] - 1]
+            to_pt = self.circumcenters[key[1] - 1]
+            # creating skeleton segment
+            skel_segment = LineString([(cc.x, cc.y) for cc in (from_pt, to_pt)])
+            skel_segments.append(skel_segment)
+        else:
+            # merging all skeleton segments to a single (possibly multiline)
+            # object
+            skel_line = linemerge(skel_segments)
+
+        # simplifying skeleton line
+        if simplify:
+            skel_line = skel_line.simplify(self.SIMPLIFY_TOLERANCE, False)
+        
+        return skel_line
+
     def retrieve_shared_edges(self, shared_nodes):
         u"""
         Retrieve shared triangle edges, therewith determining all triangles'
-        neighboring triangles.
+        neighboring triangles (not including those that just touch each other
+        in a single node).
         """
         # dictionary of shared edges, keys are 2-tuples of triangle ids (those
         # that share a node)
@@ -210,7 +248,44 @@ class TriangleWrapper():
         Build a command line to be executed via Triangle.
         """
         self.cmd = " ".join((self.triangle_bin, self.COMMAND_ARGUMENTS, '"' + poly_src + '"'))
-        print self.cmd
+        #print self.cmd
+
+    def execute_remote_triangle(self, ssh_cfg_file, remote_triangle_dir = '_triangle', remote_data_dir = '', remote_triangle_bin = '', verbose = False):
+        u"""
+        Executing Triangle on a remote machine. This is for platforms that
+        doesn't allow for compilation of Triangle, i.e. MacOS X.
+        """
+        # defining remote data directory
+        if not remote_data_dir:
+            remote_data_dir = "/".join((remote_triangle_dir, 'data'))
+        if not remote_triangle_bin:
+            remote_triangle_bin = self.triangle_bin
+        
+        # setting up remote ssh client
+        rsc = RemoteSSHClient(ssh_cfg_file)
+        # uploading source file
+        self.remote_poly_src = rsc.upload_file(self.poly_src, remote_data_dir)
+        
+        # building remote command line
+        #self.build_triangle_cmd(True)
+        
+        cmd = " ".join(("./_triangle/triangle", self.COMMAND_ARGUMENTS, '"' + self.remote_poly_src + '"'))
+        
+        # executing remote command line
+        cc, so, se = rsc.execute_commands(cmd)
+        if verbose:
+            print "Remotely executed command(s): \n\t%s" % cc
+            print "Standard output:\n%s" % "".join(["\t%s" % s for s in so])
+        if se:
+            print "Standard error:\n%s" % "".join(["\t%s" % s for s in se])
+        
+        # downloading results
+        rsc.download_file(os.path.splitext(self.remote_poly_src)[0] + ".1.node", os.path.splitext(self.poly_src)[0] + ".1.node")
+        rsc.download_file(os.path.splitext(self.remote_poly_src)[0] + ".1.ele", os.path.splitext(self.poly_src)[0] + ".1.ele")
+
+        # creating and executing command tp remove temporarily created files
+        rm_cmds = ["rm %s" % (os.path.splitext(self.remote_poly_src)[0] + ".*")]
+        rsc.execute_commands(rm_cmds)
 
     def execute_triangle(self):
         u"""
@@ -252,14 +327,29 @@ class TriangleWrapper():
         # returning increased vertex count
         return i
 
+    def cleanup(self):
+        u"""
+        Clean up, i.e. remove temporarily created files.
+        """
+        for tmp_name in self.tmp_files:
+            for suffix in (self.POLY_SUFFIX, self.NODE_SUFFIX, self.ELE_SUFFIX):
+                tmp_file = "".join((tmp_name, suffix))
+                if os.path.isfile(tmp_file):
+                    print "found and deleted: %s" % tmp_file
+                    os.unlink(tmp_file)
+
 if __name__ == '__main__':
-    
+    import matplotlib.pyplot as pp
     from shapely.geometry import Polygon
+
+    ssh_cfg_file = r"d:\tmp\_test.cfg"
+
     py = Polygon(((0., 0.), (0., 1.), (1., 1.), (1., 0.)))
+    py = Polygon(((0.92, 4.5), (5.82, 4.78), (5.64, 2.3), (3.32, 0.58), (3.02, 3.22), (4, 4)))
 
     tw = TriangleWrapper()
     tw.set_polygon(py)
-    tw.create_poly_data()
+    tw.convert_poly_data()
 
     print tw.vertices
     print tw.segments
@@ -269,7 +359,38 @@ if __name__ == '__main__':
     tw.build_triangle_cmd(tmp_name)
     
     tw.execute_triangle()
+    #tw.execute_remote_triangle(ssh_cfg_file, verbose = True)
+
     tw.read_node_file()
     tw.read_ele_file()
-    tw.create_skeleton_line()
+    
+    xlist = list()
+    ylist = list()
+    
+    j = 0
+    
+    print len(tw.triangles)
+    
+    for t in tw.triangles[:]:
+        a, b, c = [Point(t.exterior.coords[i]) for i in [0, 1, 2]]
+        pp.fill([a.x, b.x, c.x], [a.y, b.y, c.y], facecolor = 'g', alpha = 0.4, edgecolor = 'red')
+        pp.text(t.representative_point().x, t.representative_point().y, str(j + 1))
+        j += 1
+    else:
+        pp.show()
+
+    #    j += 1
+    #    print "xxx"
+    #    xlist.extend([a.x, b.x, c.x])
+    #    xlist.append(None)
+    #    ylist.extend([a.y, b.y, c.y])
+    #    ylist.append(None)
+    #
+    #print "%d triangles..." % j
+    #print xlist
+    #pp.fill(xlist, ylist, facecolor = 'none', alpha = 0.4, edgecolor = 'red')
+    #pp.show()
+    
+    
+    #tw.create_skeleton_line()
     tw.cleanup()
