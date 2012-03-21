@@ -13,7 +13,7 @@ from random import random
 from operator import attrgetter
 from math import sqrt
 
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, LineString
 
 import p2t
 
@@ -214,8 +214,42 @@ class SkeletonLineSampler(PolygonPointSampler):
     def perform_sampling(self):
         if not self.prepared:
             self.prepare_sampling()
-            
-    
+
+        self.skel = LineString()
+        
+        from triangle_wrapper import TriangleWrapper
+        self.tw = TriangleWrapper(self.polygon)
+        self.tw.convert_poly_data()
+        tmp_name = self.tw.write_poly_file()
+        self.tw.build_triangle_cmd(tmp_name)
+        self.tw.execute_triangle()
+        self.tw.read_node_file()
+        self.tw.read_ele_file()
+        single_skel = self.tw.create_skeleton_line()
+        self.skel = self.skel.union(single_skel)
+
+        self.tw.cleanup()
+        print self.skel
+
+    def create_skeleton_line(self):
+        pass
+
+    def convert_skeleton_to_sample_points(self):
+        # converting straight skeleton line to its vertices
+
+        lines = list()
+
+        if hasattr(self.skel, 'geoms'):
+            for line in self.skel:
+                lines.append(line)
+        else:
+            lines.append(self.skel)
+        
+        for line in lines:
+            for x, y in line.coords:
+                sp = Point((x, y))
+                self.samples.append(sp)
+                print sp
 
 
 if __name__ == '__main__':
