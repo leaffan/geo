@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
+# File: triangle_wrapper.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/03/13 13:51:22
 
 u"""
-... Put description here ...
-"""
+A wrapper allowing for the execution of Triangle, a Delaunay triangulation
+program available from <http://www.cs.cmu.edu/~quake/triangle.html>.
 
+"""
 import os
 import tempfile
 
 from subprocess import Popen, PIPE
 
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import linemerge
 
 from remote_ssh_client import RemoteSSHClient
@@ -27,18 +28,23 @@ class TriangleWrapper():
     POLY_SUFFIX = '.poly'
     NODE_SUFFIX = '.1.node'
     ELE_SUFFIX = '.1.ele'
+    TRIANGLE_BIN = 'triangle'
+    TRIANGLE_BIN_DIR = '_triangle'
     
-    def __init__(self, local_triangle_bin = r"triangle\triangle"):
+    def __init__(self, polygon = ''):
         u"""
         Initialize a new instance of TriangleWrapper.
         """
-        self.triangle_bin = '"' + local_triangle_bin + '"'
+        #self.triangle_bin = '"' + local_triangle_bin + '"'
+        if polygon:
+            self.set_polygon(polygon)
         self.tmp_files = list()
         self.vertex_cnt = 0
 
     def set_polygon(self, polygon):
         u"""
-        Define the polygon to be triangulated by Triangle.
+        Define the polygon to be triangulated by Triangle. Polygon is a polygon
+        geometry as represented by the Shapely library.
         """
         self.py = polygon
         self.basename = ''
@@ -53,9 +59,25 @@ class TriangleWrapper():
         self.vertices = list()
         self.segments = list()
         
-        vertex_cnt = self.traverse_linear_ring(self.py.exterior)
-        for inner_ring in self.py.interiors:
-            vertex_cnt = self.traverse_linear_ring(inner_ring, vertex_cnt)
+        # counting vertices of all the multipolygon's outlines
+        if hasattr(self.py, 'geoms'):
+            vertex_cnt = 1
+            for single_py in self.py:
+                vertex_cnt = self.traverse_linear_ring(single_py.exterior, vertex_cnt)
+        # coounting vertices of a polygon's outline
+        else:
+            vertex_cnt = self.traverse_linear_ring(self.py.exterior)
+        # counting vertives of all the multipolygon's holes
+        # using previous vertex count as starting point
+        if hasattr(self.py, 'geoms'):
+            for single_py in self.py:
+                for inner_ring in single_py.interiors:
+                    vertex_cnt = self.traverse_linear_ring(inner_ring, vertex_cnt)
+        # counting vertiex of all the source polygon's holes
+        # using previous vertex counts as starting point
+        else:
+            for inner_ring in self.py.interiors:
+                vertex_cnt = self.traverse_linear_ring(inner_ring, vertex_cnt)
     
         self.vertex_cnt = vertex_cnt
 
@@ -68,35 +90,51 @@ class TriangleWrapper():
         """
         output = list()
     
-        # building vertex header (number of vertices, number of dimensions,
+        # creating vertex header (number of vertices, number of dimensions,
         # number of attributes number of boundary markers)
         output.append("%d 2 0 0" % (self.vertex_cnt - 1))
         for cnt, x, y in self.vertices:
-            # building vertex lines (vertex id, x, y, boundary marker)
+            # creating vertex lines (vertex id, x, y, boundary marker)
             output.append("%d %f %f" % (cnt, x, y))
 
-        # building segment header (number of segments, number of boundary
+        # creating segment header (number of segments, number of boundary
         # markers)
         output.append("%d 0" % len(self.segments))
         for i in range(len(self.segments)):
-            # building segment lines (segment id, endpoint, endpoint, boundary marker)
+            # creating segment lines (segment id, endpoint, endpoint, boundary marker)
             output.append("%d %d %d" % (i + 1, self.segments[i][0], self.segments[i][1]))
 
-        # building hole header (number of holes)
-        output.append(str(len(self.py.interiors)))
-        for i in range(len(self.py.interiors)):
-            # building hole lines (hole id, x, y) using a point that is
-            # guaranteed to be within the hole
-            inner_py_pt = Polygon(self.py.interiors[i]).representative_point()
-            output.append("%d %f %f" % (i + 1, inner_py_pt.x, inner_py_pt.y))
+        # creating hole header (number of holes)
+        if hasattr(self.py, 'geoms'):
+            hole_cnt = 0
+            for single_py in self.py:
+                hole_cnt += len(single_py.interiors)
+            output.append(str(hole_cnt))
+            h = 0
+            for single_py in self.py:
+                for inner_ring in single_py.interiors:
+                    inner_py_pt = Polygon(inner_ring).representative_point()
+                    print inner_py_pt
+                    output.append("%d %f %f" % (h + 1, inner_py_pt.x, inner_py_pt.y))
+                    h += 1
+        else:
+            hole_cnt = len(self.py.interiors)
+            output.append(str(hole_cnt))
+            for i in range(len(self.py.interiors)):
+                # creating hole lines (hole id, x, y) using a point that is
+                # guaranteed to be within the hole
+                inner_py_pt = Polygon(self.py.interiors[i]).representative_point()
+                output.append("%d %f %f" % (i + 1, inner_py_pt.x, inner_py_pt.y))
 
         # creating temporary file
-        tmp_fd, tmp_name = tempfile.mkstemp(prefix = 'tw_tmp_', suffix = self.POLY_SUFFIX)
+        tmp_fd, tmp_name = tempfile.mkstemp(prefix = 'tw_', suffix = self.POLY_SUFFIX)
         tgt = os.fdopen(tmp_fd, 'wb')
+        # adding basename to list of temporarily created files to allow for
+        # later cleanup
         self.basename = os.path.splitext(tmp_name)[0]
         self.tmp_files.append(self.basename)
  
-        # putting all lines together
+        # joining all created lines and writing the result to a file
         tgt.write("\n".join(output))
         tgt.close()
         self.poly_src = tmp_name
@@ -243,12 +281,17 @@ class TriangleWrapper():
         cy = ((a.y**2 + a.x**2) * (c.x - b.x) + (b.y**2 + b.x**2) * (a.x - c.x) + (c.y**2 + c.x**2) * (b.x - a.x)) / d
         return Point((cx, cy))
 
-    def build_triangle_cmd(self, poly_src):
+    def build_triangle_cmd(self, poly_src, remote = False):
         u"""
         Build a command line to be executed via Triangle.
         """
-        self.cmd = " ".join((self.triangle_bin, self.COMMAND_ARGUMENTS, '"' + poly_src + '"'))
-        #print self.cmd
+        if remote:
+            self.triangle_bin = '"' + './' + "/".join((self.TRIANGLE_BIN_DIR, self.TRIANGLE_BIN)) + '"'
+            self.cmd = " ".join((self.triangle_bin, self.COMMAND_ARGUMENTS, '"' + poly_src + '"'))
+        else:
+            self.triangle_bin = '"' + os.path.join(self.TRIANGLE_BIN_DIR, self.TRIANGLE_BIN) + '"'
+            self.cmd = " ".join((self.triangle_bin, self.COMMAND_ARGUMENTS, '"' + poly_src + '"'))
+        print self.cmd
 
     def execute_remote_triangle(self, ssh_cfg_file, remote_triangle_dir = '_triangle', remote_data_dir = '', remote_triangle_bin = '', verbose = False):
         u"""
@@ -341,11 +384,14 @@ class TriangleWrapper():
 if __name__ == '__main__':
     import matplotlib.pyplot as pp
     from shapely.geometry import Polygon
+    from shapely.wkt import loads
 
     ssh_cfg_file = r"d:\tmp\_test.cfg"
 
     py = Polygon(((0., 0.), (0., 1.), (1., 1.), (1., 0.)))
     py = Polygon(((0.92, 4.5), (5.82, 4.78), (5.64, 2.3), (3.32, 0.58), (3.02, 3.22), (4, 4)))
+    wkt_src = r"D:\work\_misc\triangulation_sampling\wkt\mp.txt"
+    py = loads(open(wkt_src).read())
 
     tw = TriangleWrapper()
     tw.set_polygon(py)
@@ -357,6 +403,9 @@ if __name__ == '__main__':
     tmp_name = tw.write_poly_file()
     print tmp_name
     tw.build_triangle_cmd(tmp_name)
+    
+    #import sys
+    #sys.exit()
     
     tw.execute_triangle()
     #tw.execute_remote_triangle(ssh_cfg_file, verbose = True)
@@ -370,14 +419,17 @@ if __name__ == '__main__':
     j = 0
     
     print len(tw.triangles)
+
+    for t in tw.triangles:
+        print t
     
-    for t in tw.triangles[:]:
-        a, b, c = [Point(t.exterior.coords[i]) for i in [0, 1, 2]]
-        pp.fill([a.x, b.x, c.x], [a.y, b.y, c.y], facecolor = 'g', alpha = 0.4, edgecolor = 'red')
-        pp.text(t.representative_point().x, t.representative_point().y, str(j + 1))
-        j += 1
-    else:
-        pp.show()
+    #for t in tw.triangles[:]:
+    #    a, b, c = [Point(t.exterior.coords[i]) for i in [0, 1, 2]]
+    #    pp.fill([a.x, b.x, c.x], [a.y, b.y, c.y], facecolor = 'g', alpha = 0.4, edgecolor = 'red')
+    #    pp.text(t.representative_point().x, t.representative_point().y, str(j + 1))
+    #    j += 1
+    #else:
+    #    pp.show()
 
     #    j += 1
     #    print "xxx"
@@ -393,4 +445,4 @@ if __name__ == '__main__':
     
     
     #tw.create_skeleton_line()
-    tw.cleanup()
+    #tw.cleanup()
