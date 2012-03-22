@@ -14,10 +14,12 @@ from operator import attrgetter
 from math import sqrt
 
 from shapely.geometry import Point, Polygon, LineString
+from shapely.ops import linemerge
 
 import p2t
 
 from polygon_point_sampler import PolygonPointSampler
+from triangle_wrapper import TriangleWrapper
 from utils import floatrange, WeightedRandomGenerator
 
 class CentroidSampler(PolygonPointSampler):
@@ -215,26 +217,54 @@ class SkeletonLineSampler(PolygonPointSampler):
         if not self.prepared:
             self.prepare_sampling()
 
-        self.skel = LineString()
-        
-        from triangle_wrapper import TriangleWrapper
+        # performing a conforming Delaunay triangulation using Triangle
         self.tw = TriangleWrapper(self.polygon)
-        self.tw.convert_poly_data()
-        tmp_name = self.tw.write_poly_file()
-        self.tw.build_triangle_cmd(tmp_name)
-        self.tw.execute_triangle()
-        self.tw.read_node_file()
-        self.tw.read_ele_file()
-        single_skel = self.tw.create_skeleton_line()
-        self.skel = self.skel.union(single_skel)
+        self.tw.apply_triangle()
 
-        self.tw.cleanup()
-        print self.skel
+        # creating skeleton line from triangulation 
+        self.skel = self.create_skeleton_line()
+        self.convert_skeleton_to_sample_points()
 
-    def create_skeleton_line(self):
-        pass
+    def create_skeleton_line(self, simplify = True, simplify_tolerance = ''):
+        u"""
+        Create a skeleton line of the polygon by using the circumcenters of the
+        triangles created by the Conforming Delaunay Triangulation applied by
+        Triangle
+        Optionally simplify (by default) the skeleton by using an algorithm
+        provided by Shapely.
+        """
+        self.circumcenters = list()
+        for t in self.tw.triangles:
+            self.circumcenters.append(self.calculate_circumcenter(t))
+
+        # list of skeleton segments
+        skel_segments = list()
+        for key in sorted(self.tw.shared_edges.iterkeys()):
+            if self.tw.shared_edges[key] != 2:
+                continue
+            # retrieve endpoints of the skeleton segment
+            from_pt = self.circumcenters[key[0] - 1]
+            to_pt = self.circumcenters[key[1] - 1]
+            # creating skeleton segment
+            skel_segment = LineString([(cc.x, cc.y) for cc in (from_pt, to_pt)])
+            skel_segments.append(skel_segment)
+        else:
+            # merging all skeleton segments to a single (possibly multiline)
+            # object
+            skel_line = linemerge(skel_segments)
+
+        # simplifying skeleton line
+        if simplify:
+            if not simplify_tolerance:
+                simplify_tolerance = self.SIMPLIFY_TOLERANCE
+            skel_line = skel_line.simplify(simplify_tolerance, False)
+        
+        return skel_line
 
     def convert_skeleton_to_sample_points(self):
+        u"""
+        Convert a straight skeleton line to its vertices.
+        """
         # converting straight skeleton line to its vertices
 
         lines = list()
@@ -249,8 +279,17 @@ class SkeletonLineSampler(PolygonPointSampler):
             for x, y in line.coords:
                 sp = Point((x, y))
                 self.samples.append(sp)
-                print sp
 
+    def calculate_circumcenter(self, triangle):
+        u"""
+        Calculate circumcenter of given triangle in cartesian coordinates
+        according to formula given by: http://is.gd/ctPx80
+        """
+        a, b, c = [Point(triangle.exterior.coords[i]) for i in [0, 1, 2]]
+        d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y))
+        cx = ((a.y**2 + a.x**2) * (b.y - c.y) + (b.y**2 + b.x**2) * (c.y - a.y) + (c.y**2 + c.x**2) * (a.y - b.y)) / d
+        cy = ((a.y**2 + a.x**2) * (c.x - b.x) + (b.y**2 + b.x**2) * (a.x - c.x) + (c.y**2 + c.x**2) * (b.x - a.x)) / d
+        return Point((cx, cy))
 
 if __name__ == '__main__':
     

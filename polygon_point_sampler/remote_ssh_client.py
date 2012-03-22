@@ -36,26 +36,24 @@ class RemoteSSHClient():
         self.ftp = self.ssh.open_sftp()
         if remote_dir:
             if self.rexists(self.ftp, remote_dir):
-                print "exists"
                 try:
                     self.ftp.chdir(remote_dir)
                 except:
                     return None
             remote_path = "/".join((self.ftp.getcwd(), os.path.basename(local_path)))
-            print remote_path
             if self.rexists(self.ftp, remote_path):
                 print "file already exists..."
             else:
                 self.ftp.put(local_path, remote_path)
-                print "file does not exist"
         return remote_path
 
     def download_file(self, remote_path, local_path = '', gzipped = False):
         self.ftp = self.ssh.open_sftp()
         if not self.rexists(self.ftp, remote_path):
             print "remote file '%s' does not exist" % remote_path
-            return None
-        self.ftp.get(remote_path, local_path, self.print_bytes)
+            return
+        #self.ftp.get(remote_path, local_path, self.print_bytes)
+        self.ftp.get(remote_path, local_path)
 
     def print_bytes(self, trf, total):
         print "%d / %d done..." % (trf, total)

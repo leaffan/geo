@@ -13,7 +13,8 @@ u"""
 from sampler import CentroidSampler, LabelPointSampler, RegularGridSampler, UniformRandomSampler, SkeletonLineSampler
 
 if __name__ == '__main__':
-    
+
+    import time    
     from shapely.geometry import Polygon
     from shapely.wkt import loads
 
@@ -21,7 +22,8 @@ if __name__ == '__main__':
 
     wkt_src = r"D:\work\_misc\triangulation_sampling\wkt\p.txt"
     py = loads(open(wkt_src).read())
-    print py.area
+
+    t0 = time.time()
 
     print "Centroid sampling:"
     cs = CentroidSampler(py)
@@ -48,9 +50,12 @@ if __name__ == '__main__':
     for s in us.samples:
         print "\t", s
     
-    us.print_triangles()
+    #us.print_triangles()
     
     print "Skeleton line sampling:"
     sls = SkeletonLineSampler(py)
     sls.perform_sampling()
-    sls.convert_skeleton_to_sample_points()
+    for s in sls.samples:
+        print "\t", s
+
+    print "elapsed time: %f" % (time.time() - t0)
