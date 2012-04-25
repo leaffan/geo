@@ -253,37 +253,55 @@ class SpeciesFinder():
     def set_search_name(self, search_name):
         self.search_name = search_name
     
-    def find_species(self):
+    def search_on_eunis(self):
         if not self.search_name:
-            return None
-
+            return list()
+        
         query_str = "+".join(self.search_name.split())
         query_url = "".join((self.URL_PREFIX, query_str))
         query_conn = urllib2.urlopen(query_url)
 
         self.query_doc = lxml.html.parse(query_conn).getroot().get_element_by_id('content')
         self.query_doc.make_links_absolute()
-        
+
         search_results = self.query_doc.xpath("//table[@summary='Search results']/tbody/tr")
+        
+        return search_results
+    
+    def find_species(self, verbose = False):
+        #if not self.search_name:
+        #    return None
+        #
+        #query_str = "+".join(self.search_name.split())
+        #query_url = "".join((self.URL_PREFIX, query_str))
+        #query_conn = urllib2.urlopen(query_url)
+        #
+        #self.query_doc = lxml.html.parse(query_conn).getroot().get_element_by_id('content')
+        #self.query_doc.make_links_absolute()
+        #
+        #search_results = self.query_doc.xpath("//table[@summary='Search results']/tbody/tr")
+
+        search_results = self.search_on_eunis()
+        
+        if not search_results:
+            return None
         
         if len(search_results) > 1:
             (sp_name, sp_type, sp_url), similarity = self.find_best_match(search_results)
-            print "Best match for '%s': '%s' %s [%s]" % (self.search_name, sp_name, sp_type, sp_url)
+            if verbose:
+                print "Best match for '%s': '%s' %s [%s]" % (self.search_name, sp_name, sp_type, sp_url)
         else:
             (sp_name, sp_type, sp_url) = self.get_species_info_from_row(search_results[0])
 
         if sp_type.lower() == "(synonym)":
-            sp_name, sp_url = self.find_valid_name_for_synonym(sp_name, sp_url)
-        elif sp_type:
-            print
-            print sp_type
-            print
+            sp_name, sp_url = self.find_valid_name_for_synonym(sp_name, sp_url, verbose)
 
         self.species = Species(sp_name)
         self.species.set_url(sp_url)
+        #return sp_name
         #self.get_species_data()
     
-    def find_valid_name_for_synonym(self, synonym, synonym_url):
+    def find_valid_name_for_synonym(self, synonym, synonym_url, verbose = False):
         species_conn = urllib2.urlopen(synonym_url)
         self.species_doc = lxml.html.parse(species_conn).getroot().get_element_by_id('content')
         self.species_doc.make_links_absolute()
@@ -298,7 +316,8 @@ class SpeciesFinder():
         else:
             author = ''
 
-        print "'%s' (%s) is a synonym of '%s': [%s]" % (synonym, author, valid_name, tgt_url)
+        if verbose:
+            print "'%s' (%s) is a synonym of '%s': [%s]" % (synonym, author, valid_name, tgt_url)
         
         return valid_name, tgt_url
     

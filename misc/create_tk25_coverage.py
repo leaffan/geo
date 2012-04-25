@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
+# File: create_tk25_coverage.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/03/26 11:31:39
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     from osgeo import ogr, osr
     from _utils import ogr_utils
 
-    tgt_shp = r"d:\tmp\tk25_cov_final.shp"
+    tgt_shp = r"d:\tmp\tk10_cov_final.shp"
 
     sr = osr.SpatialReference()
     sr.SetWellKnownGeogCS('WGS84')
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     initial_lat = initial_corner.latitude
     initial_lon = initial_corner.longitude
     
-    delta_lat = DMSCoordinate(0, 6)
-    delta_lon = DMSCoordinate(0, 10)
+    delta_lat = DMSCoordinate(0, 3)
+    delta_lon = DMSCoordinate(0, 5)
 
     import sys
     #sys.exit()

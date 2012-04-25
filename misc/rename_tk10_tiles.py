@@ -12,54 +12,40 @@ u"""
 
 from osgeo import ogr
 
+def quad_generator(count, width):
+    row = 0
+    for i in range(0, count):
+        if i % width == 0:
+           row += 1 
+        id_1 = i * 2 + (row - 1) * width * 2
+        id_2 = id_1 + 1
+        id_3 = id_1 + width * 2
+        id_4 = id_3 + 1
+        yield (id_1, id_2, id_3, id_4)
+
 if __name__ == '__main__':
     
-    tk10_src_shp = r"d:\tmp\tk10_cov.shp"
-    tk25_src_shp = r"d:\tmp\tk25_cov.shp"
+    tk10_src_shp = r"d:\tmp\tk10_cov_final.shp"
+    tk25_src_shp = r"d:\tmp\tk25_cov_final.shp"
     
     ds25 = ogr.Open(tk25_src_shp)
     ly25 = ds25.GetLayer()
     ds10 = ogr.Open(tk10_src_shp, 1)
     ly10 = ds10.GetLayer()
-    
-    print ly10.GetFeatureCount()
-    
-    
-    ft25 = ly25.GetNextFeature()
-    
-    while ft25 is not None:
-        gm25 = ft25.GetGeometryRef()
+
+    ft25_id = 0
+
+    for ft10_ids in quad_generator(ly25.GetFeatureCount(), 61):
+        ft25 = ly25.GetFeature(ft25_id)
         id25 = ft25.GetFieldAsString('id')
-
-        ul_lat = ft25.GetFieldAsDouble('ul_lat')
-        ul_lon = ft25.GetFieldAsDouble('ul_lon')
-        lr_lat = ft25.GetFieldAsDouble('lr_lat')
-        lr_lon = ft25.GetFieldAsDouble('lr_lon')
-
-        ly10.SetSpatialFilterRect(ul_lon, lr_lat, lr_lon, ul_lat)
-
-        intersected_quadrants = list()
-        
-        ft10 = ly10.GetNextFeature()
-        while ft10 is not None:
-            gm10 = ft10.GetGeometryRef()
-            if gm25.Intersects(gm10.Centroid()):
-                intersected_quadrants.append(ft10.GetFID())
-            ft10 = ly10.GetNextFeature()
-        else:
-            i = 1
-            for ft_id in sorted(intersected_quadrants):
-                ft10 = ly10.GetFeature(ft_id)
-                new_id = "%s%d" % (id25, i)
-                print "\t%d : %s" % (ft_id, new_id)
-                i += 1
-                ft10.SetField('id', new_id)
-                ly10.SetFeature(ft10)
-            else:
-                print
-        
-        ly10 = ds10.GetLayer()
-        ft25 = ly25.GetNextFeature()
-        
-
+        print "Working on id '%s'..." % id25
+        k = 1
+        for ft10_id in ft10_ids:
+            new_id = "%s%d" % (id25, k)
+            k += 1
+            print new_id
+            ft10 = ly10.GetFeature(ft10_id)
+            ft10.SetField('id', new_id)
+            ly10.SetFeature(ft10)
+        ft25_id += 1
 
