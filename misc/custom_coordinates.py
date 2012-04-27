@@ -12,7 +12,7 @@ minutes, and seconds.
 A convenient way to add dms coordinates as well as to substract them from each
 other is added by corresponding overloaded operators.
 TODO:
-    - add constraints, i.e. latitude smaller 
+    - add constraints, i.e. latitude necessarily smaller than 90 degrees
     - allow for hemisphere changes
 """
 
@@ -20,7 +20,6 @@ import decimal as libdecimal
 from decimal import Decimal as D
 
 class GeographicCoordinates(object):
-    
     def __init__(self, latitude = None, longitude = None):
         if latitude is None:
             self.latitude = DMSCoordinate(0, 0)
@@ -35,7 +34,6 @@ class GeographicCoordinates(object):
         return "[%s / %s]" % (self.latitude.__str__(), self.longitude.__str__())
 
 class DMSCoordinate(object):
-    
     def __init__(self, degrees, minutes, seconds = 0, hemisphere = ''):
         self.degrees = degrees
         self.minutes = minutes
@@ -122,4 +120,3 @@ if __name__ == '__main__':
     latlon = GeographicCoordinates(DMSCoordinate.from_decimal(52, 'n'), DMSCoordinate(12, 30, hemisphere = 'e'))
     
     print latlon
-

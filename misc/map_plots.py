@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
+# File: map_plots.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/04/25 11:23:01
 
 u"""
-... Put description here ...
+This scripts maps plots given by x and y coordinates into a vector dataset.
 """
 
 import os
@@ -30,10 +30,6 @@ def read_coordinates(coord_src):
 
 if __name__ == '__main__':
     
-    #plt_src = r"D:\work\ms.monina\wp5\wahner_heide\field\plot_ids_2011.txt"
-    #coo_src_uh_2011 = r"D:\work\ms.monina\wp5\wahner_heide\field\koordinaten_ulli_2011.txt"
-    #coo_src_df_2011 = r"D:\work\ms.monina\wp5\wahner_heide\field\koordinaten_dirk_2011.txt"
-
     veg_src_uh = r"D:\work\ms.monina\wp5\wahner_heide\field\wh_veg_final_uh_2011.txt"
     veg_src_df = r"D:\work\ms.monina\wp5\wahner_heide\field\wh_veg_final_df_2011.txt"
     
@@ -82,5 +78,3 @@ if __name__ == '__main__':
         pnt_ft.SetField('x', x)
         pnt_ft.SetField('y', y)
         ly.CreateFeature(pnt_ft)
-    
-    
