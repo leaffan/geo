@@ -24,7 +24,7 @@ def CLASS(*args):
 def create_table_row(species, coverage):
     if "." in species:
         species = species.replace(".", " ")
-    tr = E.tr(E.td(species), E.td(coverage, CLASS("numeric")), E.td(""))
+    tr = E.tr(E.td(species), E.td(""), E.td(coverage, CLASS("numeric")))
     return tr
 
 def set_element_text(doc, element_id, data_dict, data_key, raw = False):
@@ -36,16 +36,17 @@ def set_element_text(doc, element_id, data_dict, data_key, raw = False):
 
 if __name__ == '__main__':
     
-    tpl_src = r"D:\tmp\fieldsheet_template2.html"
-    tpl_src = r"/Users/markus/_work/veggeo/msave/fieldsheet_template2.html"
-    tgt_dir = r"d:\tmp\veg\nordost"
-    tgt_dir = r"/Users/markus/_tmp/bayern"
-    plt_src = r"D:\tmp\veg\Bayern_120112_FFH_fuer naechste Phase.csv"
-    plt_src = r"d:\tmp\veg\NordOst_071211_FFHneu_fuer naechste Phase.csv"
-    plt_src = r"/Users/markus/_work/veggeo/msave/NordOst_071211_FFHneu_fuer naechste Phase.csv"
-    plt_src = r"/Users/markus/_work/veggeo/msave/Bayern_120112_FFH_fuer naechste Phase.csv"
-    plt_src = r"/Users/markus/_work/veggeo/msave/NordOst_071211_HNV_fuer naechste Phase.csv"
-    plt_src = r"/Users/markus/_work/veggeo/msave/Bayern_120112_HNV_fuer naechste Phase.csv"
+    tpl_src = r"d:\work\veggeo\msave\2012_fieldsheet_update\2012_fieldsheet_template.html"
+    tgt_dir = r"d:\work\veggeo\msave\2012_fieldsheet_update\fieldsheets"
+    #tgt_dir = r"/Users/markus/_tmp/bayern"
+    plt_src = r"d:\work\veggeo\msave\2012_fieldsheet_update\data\Bayern_120112_FFH_fuer naechste Phase.csv"
+    plt_src = r"d:\work\veggeo\msave\2012_fieldsheet_update\data\NordOst_071211_FFHneu_fuer naechste Phase.csv"
+    plt_src = r"d:\work\veggeo\msave\2012_fieldsheet_update\data\NordOst_071211_HNV_fuer naechste Phase.csv"
+    plt_src = r"d:\work\veggeo\msave\2012_fieldsheet_update\data\Bayern_120112_HNV_fuer naechste Phase.csv"
+    #plt_src = r"/Users/markus/_work/veggeo/msave/NordOst_071211_FFHneu_fuer naechste Phase.csv"
+    #plt_src = r"/Users/markus/_work/veggeo/msave/Bayern_120112_FFH_fuer naechste Phase.csv"
+    #plt_src = r"/Users/markus/_work/veggeo/msave/NordOst_071211_HNV_fuer naechste Phase.csv"
+    #plt_src = r"/Users/markus/_work/veggeo/msave/Bayern_120112_HNV_fuer naechste Phase.csv"
     
     MAX_NUMBER_SPECIES_ROWS = 16
     
@@ -55,6 +56,8 @@ if __name__ == '__main__':
     elif 'bayern' in plt_src.lower():
         utm_zone = 32
         region = "Bayern"
+    
+    tgt_dir = os.path.join(tgt_dir, region.lower())
     
     if '_ffh' in plt_src.lower():
         sheet_type = 'FFH'
@@ -78,11 +81,16 @@ if __name__ == '__main__':
     
     species = sorted(csv_reader.fieldnames[csv_reader.fieldnames.index('Humidity') + 1:])
     
+    record_count = 0
+    
     for row in csv_reader:
         # retrieving plot id and x and y coordinates
         plot = int(row['Plot'])
         x = int(row["X_UTM%d" % utm_zone])
         y = int(row["Y_UTM%d" % utm_zone])
+
+        # incrementing record count
+        record_count += 1
 
         # creating plot-specific list of dominant species
         plot_species = list()
@@ -119,11 +127,12 @@ if __name__ == '__main__':
         set_element_text(htm, 'soil_fraction', row, 'Soil(%)')
         set_element_text(htm, 'water_fraction', row, 'Water(%)')
         set_element_text(htm, 'litter_fraction', row, 'Litter(%)')
+        set_element_text(htm, 'cryptogam_fraction', row, 'Kryptogamen(%)')
 
         # setting dominant species
         species_header = htm.get_element_by_id("species_header")
         # creating some empty table rows
-        for i in range(0, 10):
+        for i in range(0, 20):
             species_header.addnext(create_table_row("", ""))
         plot_species.reverse()
         # creating table rows with previous data
@@ -133,7 +142,10 @@ if __name__ == '__main__':
 
         # creating new html document
         doc = etree.ElementTree(htm)
-        tgt_name = "%s_%s_%d.html" % (region.lower(), sheet_type.lower(), plot)
+        if record_count >= 100:
+            tgt_name = "%s_%s_%03d.html" % (region.lower(), sheet_type.lower(), plot)
+        else:
+            tgt_name = "%s_%s_%02d.html" % (region.lower(), sheet_type.lower(), plot)
         tgt_path = os.path.join(tgt_dir, tgt_name)
         print tgt_path
         doc.write(tgt_path, pretty_print = True, method = "html", encoding="utf-8")
