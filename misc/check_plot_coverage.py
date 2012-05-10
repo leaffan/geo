@@ -53,6 +53,7 @@ def check_coverage(img_src, locations, neighborhood = 1):
 if __name__ == '__main__':
     plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
     cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\coverage"
+    cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\coverage"
 
     # reading plots from vector dataset
     plt_ds = ogr.Open(plt_src)
