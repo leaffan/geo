@@ -64,12 +64,16 @@ def build_suffixes(max_count):
 if __name__ == '__main__':
     
     apex_src_dir = r"D:\geo_data\ms.monina\airborne\apex\2011-09-14_wahner_heide\utm32"
+    apex_src_dir = r"D:\geo_data\ms.monina\airborne\apex\2011-09-14_wahner_heide\orig"
     apex_plt_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\apex_strip_plot_id_linkage_unique.txt"
     apex_bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\apex_bad_bands.txt"
     plt_shp_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
 
-    neighborhood = 3
+    tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\new"
+    tgt_file = "2011-09-14_apex_wahner_heide_spectra.txt"
 
+    neighborhood = 2
+    
     # retrieving links between flight strips and plot ids
     image_plt_links = retrieve_image_plot_links(apex_plt_src)
     # retrieving apex image files
@@ -85,6 +89,7 @@ if __name__ == '__main__':
     # building an image data dictionary using strip ids as keys
     image_data = dict()
     for f in image_data_files:
+        print f
         strip_id = int(f[-5])
         image_data[strip_id] = f
 
@@ -98,7 +103,7 @@ if __name__ == '__main__':
     output = list()
     
     # iterating over a selection of strip ids
-    for strip_id in [2]: #, 3, 4]:
+    for strip_id in [2, 3, 4]:
         # setting up a list of plots that are linked with the current strip
         strip_locations = list()
         # setting up the output for current strip id
@@ -112,7 +117,7 @@ if __name__ == '__main__':
         # extracting spectra from the current image strip for all plots that
         # are linked with it
         # bands that have been regarded bad are ignored
-        spectra = gdal_utils.extract_spectra(image_data[strip_id], strip_locations, verbose = False, neighborhood = 3, bad_bands = apex_bad_bands)
+        spectra = gdal_utils.extract_spectra(image_data[strip_id], strip_locations, verbose = True, neighborhood = neighborhood, bad_bands = apex_bad_bands)
 
         # as there are as much plots for the current strip as there are spectra
         # we can simultaneously iterate over them
@@ -157,9 +162,14 @@ if __name__ == '__main__':
 
         output += strip_output
 
+    if neighborhood > 1:
+        tgt_file = tgt_file.replace(".txt", "_%dx%d.txt" % tuple([neighborhood] * 2))
+    tgt_path = os.path.join(tgt_dir, tgt_file)
+    open(tgt_path, 'wb').write("\n".join(output))
+
     #print output[0]
 
-    print "\n".join(output)
+    #print "\n".join(output)
     
     #open(r"d:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\2011-09-14_apex_wahner_heide_spectra.txt", 'wb').write("\n".join(output))
 

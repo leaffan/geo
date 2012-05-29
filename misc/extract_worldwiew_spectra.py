@@ -10,11 +10,13 @@ u"""
 ... Put description here ...
 """
 
+import os
+
 from operator import itemgetter
 
 from osgeo import ogr
 
-from _utils import ogr_utils, gdal_utils
+from _utils import ogr_utils, gdal_utils, general_utils
 
 def build_suffixes(max_count):
     i = 0
@@ -33,10 +35,17 @@ def build_suffixes(max_count):
 
 if __name__ == '__main__':
     
-    img_src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\orig\11AUG02110614-M2AS-WAHNER-HEIDE_I004811_FL02-P011833.TIF"
-    plt_src =  r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
-    cov_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\2011-08-02_worldview_plot_coverage.txt"
-    neighborhood = 2
+    #img_src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\orig\11AUG02110614-M2AS-WAHNER-HEIDE_I004811_FL02-P011833.TIF"
+    img_src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\mos\2009-08-06_hymap_wahner_heide_mosaik_utm32.tif"
+    #plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
+    plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2009.shp"
+    #cov_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\2011-08-02_worldview_plot_coverage.txt"
+    cov_src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\2009-08-06_hymap_plot_coverage.txt"
+    #tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview"
+    tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap"
+    #tgt_file = "2011-08-02_worldview_wahner_heide_spectra.txt"
+    tgt_file = "2009-08-06_hymap_wahner_heide_spectra.txt"
+    neighborhood = 1
     
     plt_coverage = dict()
     for line in open(cov_src).readlines():
@@ -75,15 +84,21 @@ if __name__ == '__main__':
             single_band_output = list()
             for band in range(1, 9):
                 raw_output = list()
-                for suff in build_suffixes(len(spectrum[0]['raw'])):
+                for suff in general_utils.letter_generator(len(spectrum[0]['raw'])):
+                #for suff in build_suffixes(len(spectrum[0]['raw'])):
                     raw_output.append("%d_raw_%s" % (band, suff))
                 single_band_output.append("%s\t%d_mean\t%d_std_dev" % ("\t".join(raw_output), band, band))
                 #single_band_output.append("%d_raw_a\t%d_raw_b\t%d_raw_c\t%d_raw_d\t%d_mean\t%d_std_dev" % tuple([band] * 6))
             output.insert(0, "\t".join(("plot_id", "x", "y", "\t".join(single_band_output))))
         # otherwise the header is much easier to build
         else:
-            output.insert(0, "\t".join(("plot_id", "x", "y", "\t".join([str(k) for k in range(1, 9)]))))
+            output.insert(0, "\t".join(("plot_id", "x", "y", "\t".join([str(k) for k in range(1, 126)]))))
         
 
     #print output[0]
-    print "\n".join(output)
+    #print "\n".join(output)
+
+    if neighborhood > 1:
+        tgt_file = tgt_file.replace(".txt", "_%dx%d.txt" % tuple([neighborhood] * 2))
+    tgt_path = os.path.join(tgt_dir, tgt_file)
+    open(tgt_path, 'wb').write("\n".join(output))

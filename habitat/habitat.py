@@ -23,7 +23,7 @@ from shapely.ops import linemerge
 
 class Species():
     
-    TAXA = ['Kingdom', 'Phylum', 'Class', 'Subclass', 'Order', 'Family', 'Genus']
+    TAXA = ['Kingdom', 'Division', 'Class', 'Subclass', 'Order', 'Family', 'Genus']
     
     def __init__(self, name):
         self.set_name(name)
@@ -354,7 +354,7 @@ class SpeciesFinder():
 
         self.species.set_taxonomic_information(tax_dict)
         self.species.set_author(author)
-        self.species.print_species_data()
+        #self.species.print_species_data()
     
     def get_species_info_from_row(self, row):
         idx = self.find_species_column()
@@ -521,4 +521,24 @@ def get_taxonomic_information(species_name, verbose = False):
 
 if __name__ == '__main__':
     
-    pass
+    import pickle
+    
+    src = r"data\_natura_2000_de.pkl"
+    
+    n2k_de = pickle.load(open(src))
+
+    i = 0
+
+    output = list()
+
+    for sitecode in sorted(n2k_de):
+        site = n2k_de[sitecode]
+        #output.append("\t".join((sitecode, site.name, site.description, str(site.region), str(site.nuts_code), str(site.size), site.urls['www.bfn.de'])))
+        for ht in site.habitat_types:
+            output.append("\t".join((str(i), sitecode, ht.code)))
+            i += 1
+        #i += 1
+        #if i > 5:
+        #    break
+
+    print "\n".join(output)
