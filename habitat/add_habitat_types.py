@@ -19,7 +19,7 @@ def add_habitat_type(shp_src, n2k_src):
     ly = ds.GetLayer(0)
     n2k = pickle.load(open(n2k_src))
 
-    for ft in ly[:]:
+    for ft in ly:
         sitecode = ft.GetFieldAsString('sitecode')
         print "Working on Natura 2000 area %s..." % sitecode
         n2k_area = n2k[sitecode]
@@ -30,16 +30,11 @@ def add_habitat_type(shp_src, n2k_src):
 
 if __name__ == '__main__':
     
-    shp_src = r"D:\work\ms.monina\wp4\work\natura_2000__mtb__intersect.shp"
-    shp_src = r"D:\work\ms.monina\wp4\work\natura_2000__mtbq__intersect.shp"
+    shp_src = r"D:\work\ms.monina\wp4\work\natura2000_mtb_intersect.shp"
+    #shp_src = r"D:\work\ms.monina\wp4\work\natura2000_mtbq_intersect.shp"
     
     n2k_src = r"data\_natura_2000_de.pkl"
     hab_src = r"data\_habitat_types.pkl"
 
     add_habitat_type(shp_src, n2k_src)
 
-    import sys
-    sys.exit()
-    
-    #hab = pickle.load(open(hab_src))[1]
-    

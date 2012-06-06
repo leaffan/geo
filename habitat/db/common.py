@@ -19,11 +19,11 @@ from _utils.cfg_utility import CfgUtility
 cfg = CfgUtility(r"D:\pgsql_pinguicula.cfg")
 
 db_engine = cfg.get_value('db_engine')
-user      = cfg.get_value('user')
-password  = cfg.get_value('password')
-host      = cfg.get_value('host')
-port      = int(cfg.get_value('port'))
-database  = cfg.get_value('database')
+user = cfg.get_value('user')
+password = cfg.get_value('password')
+host = cfg.get_value('host')
+port = int(cfg.get_value('port'))
+database = cfg.get_value('database')
 
 conn_string = "%s://%s:%s@%s:%d/%s" % (db_engine, user, password, host, port, database)
 

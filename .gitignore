@@ -1,1 +1,2 @@
 *.pyc
+/polygon_point_sampler/_data

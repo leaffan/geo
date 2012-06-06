@@ -17,7 +17,7 @@ if __name__ == '__main__':
     
     flk_src = r"D:\work\ms.monina\wp4\florkart\florkart_update_2012_working_copy.mdb"
     #spc_src = r"D:\tmp\hd_annex_species_germany.txt"
-    spc_src = r"D:\tmp\eunis_ht_characteristic_species_germany.txt"
+    spc_src = r"D:\work\ms.monina\wp4\eunis_ht_characteristic_species_germany.txt"
 
     sql_query = "SELECT DISTINCT Q.QUAD, Q.SIPNR, Q.SYM, t.TAXNR, t.SP_NUM, t.SP_NAM, t.SP_SHORT \
                  FROM FLORKART_ATLQUADINT AS Q INNER JOIN taxa AS t ON Q.SIPNR = t.taxnr \
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     
     lines = open(spc_src).readlines()
 
-    for line in lines[:]:
+    for line in lines[:2]:
         if line.strip().startswith('#'):
             continue
         tokens = line.strip().split("\t")

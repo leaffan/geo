@@ -43,10 +43,28 @@ class DbSpecies(Base):
 
 if __name__ == '__main__':
     
+    src = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_eunis_characteristic_species_germany.txt"
+    
+    lines = open(src).readlines()
+    
     sp = DbSpecies().find('Betula pendula')
     
-    print sp
+    i = 0
     
+    for line in lines[:]:
+        tokens = line.strip().split(";")
+        sp_name, map_id, symbol = tokens[0:3]
+        if sp_name != sp.name:
+            sp = DbSpecies().find(sp_name)
         
-    
+        if int(map_id[-1]):
+            is_quadrant = True
+        else:
+            is_quadrant = False
+        
+        print "%d\t%s\t%d\t%s\t%s" % (i, map_id, sp.species_id, is_quadrant, symbol)
+        
+        i += 1
+        
+
     
