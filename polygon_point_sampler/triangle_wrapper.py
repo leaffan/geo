@@ -12,11 +12,12 @@ program available from <http://www.cs.cmu.edu/~quake/triangle.html>.
 
 It allows for the execution of Triangle both locally and on a remote machine.
 To facilitate the latter it is necessary to use a RemoteSSHClient object.
-
 """
+
 import os
 import tempfile
 import sys
+import time
 from subprocess import Popen, PIPE
 
 from shapely.geometry import Point, LineString, Polygon
@@ -236,12 +237,13 @@ class TriangleWrapper():
         # preparing list of nodes
         self.nodes = list()
 
-        # reading lines
-        lines = open(node_src).readlines()
-        # retrieving node count
-        node_cnt = int(lines.pop(0).split()[0])
+        # opening source file
+        fo = open(node_src)
 
-        for line in lines:
+        # retrieving node count
+        node_cnt = int(fo.readline().split()[0])
+        
+        for line in fo:
             # skipping blank lines and comments
             if not line.strip() or line.startswith('#'):
                 continue
@@ -263,16 +265,17 @@ class TriangleWrapper():
         # preparing list of triangles
         self.triangles = list()
 
-        # reading lines from *.ele file
-        lines = open(ele_src).readlines()
+        # opening source file
+        fo = open(ele_src)
+
         # retrieving triangle count
-        triangle_cnt = int(lines.pop(0).split()[0])
+        triangle_cnt = int(fo.readline().split()[0])
 
         # preparing a dictionary containing all triangles ids that share a
         # node
         shared_nodes = dict()
 
-        for line in lines:
+        for line in fo:
             # skipping blank lines and comments
             if not line.strip() or line.startswith('#'):
                 continue

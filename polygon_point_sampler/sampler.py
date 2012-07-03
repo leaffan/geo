@@ -32,7 +32,7 @@ class CentroidSampler(PolygonPointSampler):
         for src in self.src:
             self.samples.append(src.centroid)
 
-class LabelPointSampler(PolygonPointSampler):
+class RepresentativePointSampler(PolygonPointSampler):
     def perform_sampling(self):
         u"""
         Perform sampling by representing each source polygon with a
@@ -219,6 +219,7 @@ class SkeletonLineSampler(PolygonPointSampler):
 
         # performing a conforming Delaunay triangulation using Triangle
         self.tw = TriangleWrapper(self.polygon)
+        #self.tw.toggle_verbosity()
         self.tw.apply_triangle()
 
         # creating skeleton line from triangulation 
