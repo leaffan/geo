@@ -12,6 +12,8 @@ u"""
 import os
 import glob
 import sys
+import string
+import re
 
 from osgeo import ogr
 from operator import itemgetter
@@ -52,7 +54,8 @@ def build_suffixes(max_count):
     j = 1
     continued = True
     while continued:
-        for l in map(chr, range(97, 123)):
+        for l in string.ascii_lowercase:
+        #for l in map(chr, range(97, 123)):
             i += 1
             if i > max_count:
                 continued = False
@@ -63,13 +66,12 @@ def build_suffixes(max_count):
 
 if __name__ == '__main__':
     
-    apex_src_dir = r"D:\geo_data\ms.monina\airborne\apex\2011-09-14_wahner_heide\utm32"
-    apex_src_dir = r"D:\geo_data\ms.monina\airborne\apex\2011-09-14_wahner_heide\orig"
-    apex_plt_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\apex_strip_plot_id_linkage_unique.txt"
-    apex_bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\apex_bad_bands.txt"
+    apex_src_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_work"
+    apex_plt_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_strip_plot_id_linkage_unique.txt"
+    apex_bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_bad_bands.txt"
     plt_shp_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
 
-    tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\new"
+    tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_spectra"
     tgt_file = "2011-09-14_apex_wahner_heide_spectra.txt"
 
     neighborhood = 2
@@ -77,7 +79,8 @@ if __name__ == '__main__':
     # retrieving links between flight strips and plot ids
     image_plt_links = retrieve_image_plot_links(apex_plt_src)
     # retrieving apex image files
-    image_data_files = glob.glob(os.path.join(apex_src_dir, "*.img"))
+    types = ('.img')
+    image_data_files = [f for f in glob.glob(os.path.join(apex_src_dir, "*.*")) if os.path.splitext(f)[-1] in types]
     # setting apex bands
     apex_bands = set(range(1, 289))
     # retrieving apex bad bands from specified file
@@ -89,10 +92,8 @@ if __name__ == '__main__':
     # building an image data dictionary using strip ids as keys
     image_data = dict()
     for f in image_data_files:
-        print f
-        strip_id = int(f[-5])
+        strip_id = int(re.search("wahner_heide_(\d)", f).group(1))
         image_data[strip_id] = f
-
     # retrieving plots
     plt_ds = ogr.Open(plt_shp_src)
     plt_ly = plt_ds.GetLayer(0)
@@ -168,10 +169,6 @@ if __name__ == '__main__':
     open(tgt_path, 'wb').write("\n".join(output))
 
     #print output[0]
-
     #print "\n".join(output)
-    
     #open(r"d:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\2011-09-14_apex_wahner_heide_spectra.txt", 'wb').write("\n".join(output))
-
     #open(r"d:\tmp\apex_spectra.txt", 'wb').write("\n".join(output))
-    

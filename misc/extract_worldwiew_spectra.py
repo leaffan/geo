@@ -36,7 +36,7 @@ def build_suffixes(max_count):
 if __name__ == '__main__':
     
     #img_src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\orig\11AUG02110614-M2AS-WAHNER-HEIDE_I004811_FL02-P011833.TIF"
-    img_src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\mos\2009-08-06_hymap_wahner_heide_mosaik_utm32.tif"
+    img_src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\georef\2009-08-06_hymap_wahner_heide_georef_mosaik_utm32.tif"
     #plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
     plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2009.shp"
     #cov_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\2011-08-02_worldview_plot_coverage.txt"

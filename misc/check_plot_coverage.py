@@ -53,14 +53,19 @@ def check_coverage(img_src, locations, neighborhood = 1, plot_id_name = 'plot_id
 if __name__ == '__main__':
     plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
     plt_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\field\releve_686_plots.shp"
+    plt_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\doeberitzer_heide_plotsCopy.shp"
     #plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2009.shp"
     cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\coverage_old"
     cov_dir = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\coverage\reduced"
+    cov_dir = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\coverage"
     #cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\coverage"
     #cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\coverage"
 
     plot_id_name = 'plot_id'
-    plot_id_name = 'ID'
+    #plot_id_name = 'ID'
+    #plot_id_name = 'NUMMER'
+
+    img_extension = '*.img'
 
     # reading plots from vector dataset
     plt_ds = ogr.Open(plt_src)
@@ -71,11 +76,11 @@ if __name__ == '__main__':
     coverages = dict()
 
     # iterating over all GeoTiffs in coverage directory
-    for tif in glob.glob(os.path.join(cov_dir, '*.tif')):
-        print "+ Checking for plot availability in dataset '%s'..." % os.path.basename(tif),
+    for img in glob.glob(os.path.join(cov_dir, img_extension)):
+        print "+ Checking for plot availability in dataset '%s'..." % os.path.basename(img),
         # checking plot coverage for current GeoTiff
-        cov = check_coverage(tif, cached_plots, 2, plot_id_name)
-        coverages[os.path.basename(tif)] = cov
+        cov = check_coverage(img, cached_plots, 2, plot_id_name)
+        coverages[os.path.basename(img)] = cov
         print "Done"
 
     # iterating over all plot ids
@@ -83,7 +88,7 @@ if __name__ == '__main__':
         plot_id = cp['attributes'][plot_id_name]
         line = list()
         line.append(plot_id)
-        for tif in sorted(coverages):
-            line.append(coverages[tif][plot_id])
+        for img in sorted(coverages):
+            line.append(coverages[img][plot_id])
         else:
             print "\t".join([str(e) for e in line])

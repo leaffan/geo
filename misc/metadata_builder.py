@@ -37,46 +37,74 @@ class MetadataBuilder():
         for i in range(0, raster_count):
             print "Calculating statistics for band %d of %d..." % (i + 1, raster_count)
             bd = self.src_ds.GetRasterBand(i + 1)
-            curr_stats = bd.GetStatistics(True, True)
+            bd.SetNoDataValue(-1000)
+            curr_stats = bd.ComputeStatistics(False)
+            print curr_stats
             bd.SetNoDataValue(curr_stats[0])
             new_stats = bd.ComputeStatistics(False)
+            print new_stats
             bd.GetHistogram(new_stats[0], new_stats[1], self.BUCKET_COUNT, False, False)
 
-    def set_no_data_value(self, no_data_values = 0):
-        raster_count = self.src_ds.RasterCount
-        
-        if raster_count > 1:
-            if not type(no_data_values) is ListType:
-                no_data_values = [no_data_values] * raster_count
-            else:
-                if raster_count > len(no_data_values):
-                    no_data_values.extend([None] * (raster_count - len(no_data_values) + 1))
-       
-        for i in range(0, self.src_ds.RasterCount):
-            ndv = no_data_values[i]
-            if ndv is not None:
-                bd = self.src_ds.GetRasterBand(i + 1)
-                bd.SetNoDataValue(ndv)
-                print "No data value for band %d: %s" % (i + 1, str(ndv))
-
-    def build_metadata_xml(self):
-        self.metadata = etree.SubElement(self.root, "Metadata")
-        for i in range(0, self.src_ds.RasterCount):
-            bd = self.src_ds.GetRasterBand(i + 1)
-            etree.SubElement(self.metadata, "MDI", key = "Band_%d" % (i + 1)).text = bd.GetDescription()
+    #def set_no_data_value(self, no_data_values = 0):
+    #    raster_count = self.src_ds.RasterCount
+    #    
+    #    if raster_count > 1:
+    #        if not type(no_data_values) is ListType:
+    #            no_data_values = [no_data_values] * raster_count
+    #        else:
+    #            if raster_count > len(no_data_values):
+    #                no_data_values.extend([None] * (raster_count - len(no_data_values) + 1))
+    #   
+    #    for i in range(0, self.src_ds.RasterCount):
+    #        ndv = no_data_values[i]
+    #        if ndv is not None:
+    #            bd = self.src_ds.GetRasterBand(i + 1)
+    #            bd.SetNoDataValue(ndv)
+    #            print "No data value for band %d: %s" % (i + 1, str(ndv))
+    #
+    #def build_metadata_xml(self):
+    #    self.metadata = etree.SubElement(self.root, "Metadata")
+    #    for i in range(0, self.src_ds.RasterCount):
+    #        bd = self.src_ds.GetRasterBand(i + 1)
+    #        etree.SubElement(self.metadata, "MDI", key = "Band_%d" % (i + 1)).text = bd.GetDescription()
     
 
 if __name__ == '__main__':
     
-    src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\orig\2011-09-14_apex_wahner_heide_4_orig.img"
-    src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\2011-08-11_worldview_ms_wahner_heide.tif"
-    src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\orig\2007-07-02_ahs_kalmthoutse_heide_2_orig.img"
-    src = r"D:\tmp\ahs_6_reduced.img"
+    #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\orig\2011-09-14_apex_wahner_heide_4_orig.img"
+    #src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\2011-08-11_worldview_ms_wahner_heide.tif"
+    #src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\orig\2007-07-02_ahs_kalmthoutse_heide_2_orig.img"
+    #src = r"D:\tmp\ahs_6_reduced.img"
+    #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\orig\2011-09-14_apex_wahner_heide_1_coverage.img"
+    #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\georef\2011-09-14_wahner_heide_4_ms_georef.img"
+    src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig_3.img"
 
-    mdb = MetadataBuilder(src)
+
+
+    src_dir = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\modified"
+
+    import os
+    import glob
     
-    mdb.set_statistics()
-    mdb.flush_metadata()
+    for src in glob.glob(os.path.join(src_dir, '*.img')):
+        print src
+        mdb = MetadataBuilder(src)
+        mdb.set_statistics()
+        mdb.flush_metadata()
+
+    #mdb = MetadataBuilder(src)
+    #mdb.set_statistics()
+    #mdb.flush_metadata()
+
+
+
+
+
+
+
+
+
+
 
     #ds = gdal.Open(src)
     #
