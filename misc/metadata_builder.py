@@ -78,6 +78,8 @@ if __name__ == '__main__':
     #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\orig\2011-09-14_apex_wahner_heide_1_coverage.img"
     #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\georef\2011-09-14_wahner_heide_4_ms_georef.img"
     src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig_3.img"
+    src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\work\2009-08-06_hymap_wahner_heide_mosaik_utm32.img"
+    src = r"Z:\tmp\mos\2009_wh_hy_envi_mos.img"
 
 
 
@@ -86,15 +88,15 @@ if __name__ == '__main__':
     import os
     import glob
     
-    for src in glob.glob(os.path.join(src_dir, '*.img')):
-        print src
-        mdb = MetadataBuilder(src)
-        mdb.set_statistics()
-        mdb.flush_metadata()
+    #for src in glob.glob(os.path.join(src_dir, '*.img')):
+    #    print src
+    #    mdb = MetadataBuilder(src)
+    #    mdb.set_statistics()
+    #    mdb.flush_metadata()
 
-    #mdb = MetadataBuilder(src)
-    #mdb.set_statistics()
-    #mdb.flush_metadata()
+    mdb = MetadataBuilder(src)
+    mdb.set_statistics()
+    mdb.flush_metadata()
 
 
 

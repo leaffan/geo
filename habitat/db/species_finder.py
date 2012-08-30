@@ -39,7 +39,7 @@ class SpeciesFinder():
         
         # bailing out if nothing at all was found
         if not query_result:
-            return None
+            return None, None, None
         
         # if more than one result was found
         if len(query_result) > 1:

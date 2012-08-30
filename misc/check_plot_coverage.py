@@ -51,13 +51,15 @@ def check_coverage(img_src, locations, neighborhood = 1, plot_id_name = 'plot_id
     return coverage
 
 if __name__ == '__main__':
-    plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
-    plt_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\field\releve_686_plots.shp"
-    plt_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\doeberitzer_heide_plotsCopy.shp"
+    plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2009.shp"
+    #plt_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\field\releve_686_plots.shp"
+    #plt_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\doeberitzer_heide_releve_plots.shp"
     #plt_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2009.shp"
     cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\coverage_old"
     cov_dir = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\coverage\reduced"
     cov_dir = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\coverage"
+    cov_dir = r"D:\work\ms.monina\wp5\doeberitzer_heide\2009-08-20_hymap\coverage"
+    cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\coverage"    
     #cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-08-02_worldview\coverage"
     #cov_dir = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\coverage"
 

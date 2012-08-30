@@ -22,7 +22,7 @@ if __name__ == '__main__':
     
     link_field = "LINK_ID"
     
-    tgt_shp = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\releve_plots_2.shp"
+    tgt_shp = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\releve_plots_xxx.shp"
     
     
     
@@ -48,13 +48,14 @@ if __name__ == '__main__':
             continue
         ft_found = sel_ly.GetFeatureCount()
         if not ft_found:
-            #print r_plot_id
+            print r_plot_id
             continue
         i += 1
         if ft_found == 1:
             ft = sel_ly.GetNextFeature()
             gm = ft.GetGeometryRef()
-            print i, r_plot_id, ft_found, gm
+            #print i, r_plot_id, ft_found, gm
+            print "%s\t%f\t%f" % (r_plot_id, gm.GetX(), gm.GetY())
         elif ft_found > 1:
             x = list()
             y = list()
@@ -65,7 +66,8 @@ if __name__ == '__main__':
             else:
                 gm = ogr.Geometry(ogr.wkbPoint)
                 gm.SetPoint_2D(0, sum(x) / len(x), sum(y) / len(y))
-                print i, r_plot_id, ft_found, gm
+                #print i, r_plot_id, ft_found, gm
+                print "%s\t%f\t%f" % (r_plot_id, gm.GetX(), gm.GetY())
 
         new_ft = ogr.Feature(tgt_ly.GetLayerDefn())
         new_ft.SetGeometry(gm)

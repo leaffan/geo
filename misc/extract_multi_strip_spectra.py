@@ -1,24 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: extract_apex_spectra.py
+# File: extract_multi_strip_spectra.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/05/08 13:22:40
 
 u"""
-... Put description here ...
+This script uses a number of remote sensing images and accompanying ancillary
+information to extract point spectra from the imagery for a number of specified
+locations.
 """
 import os
 import glob
-import sys
-import string
 import re
 
 from osgeo import ogr
 from operator import itemgetter
 
-from _utils import gdal_utils, ogr_utils
+from _utils import gdal_utils, ogr_utils, general_utils
 
 def retrieve_image_plot_links(src):
     u"""
@@ -35,64 +35,70 @@ def retrieve_image_plot_links(src):
             continue
         strip_id, plots = line.split("\t")
         strip_id = int(strip_id)
-        plots = [int(p.strip()) for p in plots[1:-1].split(",")]
+        try:
+            plots = [int(p.strip()) for p in plots[1:-1].split(",")]
+        except:
+            plots = [p.strip() for p in plots[1:-1].split(",")]
         img_plt_links[strip_id] = plots
     return img_plt_links
 
 def find_image_plot_link(img_plt_links, plot_id):
     u"""
     Find the image strip for the given plot id using the specified dictionary
-    oobject.
+    object.
     """
     for strip_id in img_plt_links:
         if plot_id in img_plt_links[strip_id]:
             return strip_id
     return None
 
-def build_suffixes(max_count):
-    i = 0
-    j = 1
-    continued = True
-    while continued:
-        for l in string.ascii_lowercase:
-        #for l in map(chr, range(97, 123)):
-            i += 1
-            if i > max_count:
-                continued = False
-                break
-            yield l * j
-        else:
-            j += 1
-
 if __name__ == '__main__':
     
-    apex_src_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_work"
-    apex_plt_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_strip_plot_id_linkage_unique.txt"
-    apex_bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_bad_bands.txt"
+    # directory containing imagery
+    img_src_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_work"
+    #img_src_dir = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig"
+    #img_src_dir = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\orig"
+    # source file containing information about bad bands
+    img_bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_bad_bands.txt"
+    #img_bad_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_bad_bands.txt"
+    #img_bad_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\_info\2007-07-02_ahs_bad_bands.txt"
+    # source file containing information about linkage between image strips and  plots
+    img_plt_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_strip_plot_id_linkage_unique.txt"
+    #img_plt_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_strip_plot_id_linkage_duplicates.txt"
+    #img_plt_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\_info\2007-07-02_ahs_strip_plot_id_linkage_unique.txt"
+    # source file containing plot geometries
     plt_shp_src = r"D:\work\ms.monina\wp5\wahner_heide\shp\wh_plots_2011.shp"
-
+    #plt_shp_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\doeberitzer_heide_releve_plots.shp"
+    #plt_shp_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\field\kalmthoutse_heide_releve_plots.shp"
+    
+    # target directory for spectra output
     tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_spectra"
-    tgt_file = "2011-09-14_apex_wahner_heide_spectra.txt"
+    tgt_dir = r"Z:\tmp\spectra"
 
+    # pixel-neighborhood to extract spectra from
     neighborhood = 2
+    # image file extension(s)
+    types = ('.img')
+    
+    ############################################################################
     
     # retrieving links between flight strips and plot ids
-    image_plt_links = retrieve_image_plot_links(apex_plt_src)
-    # retrieving apex image files
-    types = ('.img')
-    image_data_files = [f for f in glob.glob(os.path.join(apex_src_dir, "*.*")) if os.path.splitext(f)[-1] in types]
-    # setting apex bands
-    apex_bands = set(range(1, 289))
-    # retrieving apex bad bands from specified file
-    apex_bad_bands = [int(b) for b in open(apex_bad_src).readlines()[1].split("\t")]
-    # retrieving apex good bands by calculating the difference between all apex
-    # bands and those that have been declared bad
-    apex_good_bands = list(apex_bands.difference(apex_bad_bands))
+    image_plt_links = retrieve_image_plot_links(img_plt_src)
+    # retrieving image files
+    image_data_files = [f for f in glob.glob(os.path.join(img_src_dir, "*.*")) if os.path.splitext(f)[-1] in types]
+    # retrieving bad bands from specified file
+    try:
+        bad_bands = [int(b) for b in open(img_bad_src).readlines()[1].split("\t")]
+    except:
+        bad_bands = list()
 
     # building an image data dictionary using strip ids as keys
     image_data = dict()
+    # list of all available strip ids
+    available_strips = list()
     for f in image_data_files:
-        strip_id = int(re.search("wahner_heide_(\d)", f).group(1))
+        strip_id = int(re.search("_(\d)_", f).group(1))
+        available_strips.append(strip_id)
         image_data[strip_id] = f
     # retrieving plots
     plt_ds = ogr.Open(plt_shp_src)
@@ -104,7 +110,15 @@ if __name__ == '__main__':
     output = list()
     
     # iterating over a selection of strip ids
-    for strip_id in [2, 3, 4]:
+    for strip_id in available_strips:
+        # retrieving band count
+        band_count = gdal_utils.get_band_count(image_data[strip_id])
+        # retrieving good bands by calculating the difference between all 
+        # bands and those that have been declared bad
+        good_bands = list(set(range(1, band_count + 1)).difference(bad_bands))
+
+        tgt_file = "".join((re.search("(.+)_\d_", os.path.basename(image_data[strip_id])).group(1), '_spectra.txt'))
+
         # setting up a list of plots that are linked with the current strip
         strip_locations = list()
         # setting up the output for current strip id
@@ -118,7 +132,7 @@ if __name__ == '__main__':
         # extracting spectra from the current image strip for all plots that
         # are linked with it
         # bands that have been regarded bad are ignored
-        spectra = gdal_utils.extract_spectra(image_data[strip_id], strip_locations, verbose = True, neighborhood = neighborhood, bad_bands = apex_bad_bands)
+        spectra = gdal_utils.extract_spectra(image_data[strip_id], strip_locations, verbose = True, neighborhood = neighborhood, bad_bands = bad_bands)
 
         # as there are as much plots for the current strip as there are spectra
         # we can simultaneously iterate over them
@@ -145,30 +159,25 @@ if __name__ == '__main__':
                 # putting it all together in output text for a single plot
                 strip_output.append("\t".join([str(x) for x in [plot_id, strip_id, strip_location['x'], strip_location['y']]] +
                                               [str(v) for v in spectrum]))
-        # finally adding header lines
-        else:
-            # checking whether we operate in some nxn-neighborhood
-            if neighborhood > 1:
-                single_band_output = list()
-                for band in apex_good_bands:
-                    raw_output = list()
-                    for suff in build_suffixes(len(spectrum[0]['raw'])):
-                        raw_output.append("%d_raw_%s" % (band, suff))
-                    single_band_output.append("%s\t%d_mean\t%d_std_dev" % ("\t".join(raw_output), band, band))
-                    #single_band_output.append("%d_raw_a\t%d_raw_b\t%d_raw_c\t%d_raw_d\t%d_mean\t%d_std_dev" % tuple([band] * 6))
-                strip_output.insert(0, "\t".join(("plot_id", "strip_id", "x", "y", "\t".join(single_band_output))))
-            # otherwise the header is much easier to build
-            else:
-                strip_output.insert(0, "\t".join(("plot_id", "strip_id", "x", "y", "\t".join([str(k) for k in apex_good_bands]))))
 
         output += strip_output
+
+    # finally adding header lines
+    # checking whether we operate in some nxn-neighborhood
+    if neighborhood > 1:
+        single_band_output = list()
+        for band in good_bands:
+            raw_output = list()
+            for suff in general_utils.letter_generator(len(spectrum[0]['raw'])):
+                raw_output.append("%d_raw_%s" % (band, suff))
+            single_band_output.append("%s\t%d_mean\t%d_std_dev" % ("\t".join(raw_output), band, band))
+            #single_band_output.append("%d_raw_a\t%d_raw_b\t%d_raw_c\t%d_raw_d\t%d_mean\t%d_std_dev" % tuple([band] * 6))
+        output.insert(0, "\t".join(("plot_id", "strip_id", "x", "y", "\t".join(single_band_output))))
+    # otherwise the header is much easier to build
+    else:
+        output.insert(0, "\t".join(("plot_id", "strip_id", "x", "y", "\t".join([str(k) for k in good_bands]))))
 
     if neighborhood > 1:
         tgt_file = tgt_file.replace(".txt", "_%dx%d.txt" % tuple([neighborhood] * 2))
     tgt_path = os.path.join(tgt_dir, tgt_file)
     open(tgt_path, 'wb').write("\n".join(output))
-
-    #print output[0]
-    #print "\n".join(output)
-    #open(r"d:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\2011-09-14_apex_wahner_heide_spectra.txt", 'wb').write("\n".join(output))
-    #open(r"d:\tmp\apex_spectra.txt", 'wb').write("\n".join(output))

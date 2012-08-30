@@ -10,18 +10,29 @@ u"""
 ... Put description here ...
 """
 
-from habitat import SpeciesFinder
+from db.species_finder import SpeciesFinder
 
 if __name__ == '__main__':
     
     sp_names = ['Agropyron repens', 'Barbarea vulgaris', 'Calamagrosis canescens', 'Oxalis stricta']
-    sp_src = r"N:\work\veg_wh_nur_d.txt"
+    sp_src = r"Z:\tmp\dh_species.txt"
     
     sp_names = [line.strip() for line in open(sp_src).readlines()]
 
     spf = SpeciesFinder()
     
-    for sp_name in sp_names:
-        spf.set_search_name(sp_name)
-        spf.find_species()
-        print "========================="
+    for spn in sp_names[:]:
+        print "Searching '%s'..." % spn
+        spf.set_search_name(spn)
+        sp_name, sp_url, sp_info = spf.find_species(True)        
+        
+        if sp_name is not None:
+            print spf.get_vernacular_name(sp_url)
+
+        
+        #if sp is None:
+        #    print "Couldn't find species name '%s'..." % sp_name
+        #else:
+        #    pass
+            #print "'%s' -> '%s'" % (sp_name, sp)
+        #print "========================="
