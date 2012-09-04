@@ -31,7 +31,7 @@ if __name__ == '__main__':
     tgt_dir = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\_spectra"
     search_pattern = 'mos'
 
-    neighborhood = 1
+    neighborhood = 2
     
     ############################################################################
     

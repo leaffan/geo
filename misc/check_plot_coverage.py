@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     coverages = dict()
 
-    # iterating over all GeoTiffs in coverage directory
+    # iterating over all images in coverage directory
     for img in glob.glob(os.path.join(cov_dir, img_extension)):
         print "+ Checking for plot availability in dataset '%s'..." % os.path.basename(img),
         # checking plot coverage for current GeoTiff
