@@ -10,40 +10,113 @@ u"""
 ... Put description here ...
 """
 
-from types import ListType
+import os
+import sys
+
+from types import *
 
 from lxml import etree
 from osgeo import gdal
 
+def ownprogress(a, b, c):
+    pass
+    #print a, c
+
 class MetadataBuilder():
 
     BUCKET_COUNT = 256
+    try:
+        INF = float('inf')
+    except:
+        INF = 1e400
     
     def __init__(self, src_img):
-        
         gdal.SetConfigOption("GDAL_PAM_ENABLED", "YES")
         gdal.SetConfigOption("ESRI_XML_PAM", "YES")
         
+        if not os.path.isfile(src_img):
+            print "Couldn't find source image '%s'..." % src_img
+            sys.exit()
+        
         self.src_img = src_img
         self.src_ds = gdal.Open(self.src_img)
+        self.raster_count = self.src_ds.RasterCount
 
     def flush_metadata(self):
         self.src_ds = None
         self.src_ds = gdal.Open(self.src_img)
 
-    def set_statistics(self, no_data_value = ''):
-        raster_count = self.src_ds.RasterCount
+    #def set_statistics(self, no_data_value = ''):
+    #    raster_count = self.src_ds.RasterCount
+    #    
+    #    for i in range(0, raster_count):
+    #        print "Calculating statistics for band %d of %d..." % (i + 1, raster_count)
+    #        bd = self.src_ds.GetRasterBand(i + 1)
+    #        bd.SetNoDataValue(-1000)
+    #        curr_stats = bd.ComputeStatistics(False)
+    #        print curr_stats
+    #        bd.SetNoDataValue(curr_stats[0])
+    #        new_stats = bd.ComputeStatistics(False)
+    #        print new_stats
+    #        bd.GetHistogram(new_stats[0], new_stats[1], self.BUCKET_COUNT, False, False)
+
+    def build_statistics(self, no_data_value = '', verbose = False):
         
-        for i in range(0, raster_count):
-            print "Calculating statistics for band %d of %d..." % (i + 1, raster_count)
+        if verbose:
+            print "Building statistics..."
+        
+        no_data_value = self.consolidate_no_data_value(no_data_value)
+        
+        if verbose:
+            if not no_data_value and type(no_data_value) is StringType:
+                print "\t+ A no data value has not been specified..."
+            else:
+                print "\t+ No data value:",
+                if type(no_data_value) is StringType:
+                     print "'%s'" % no_data_value
+                else:
+                    print "%f" % float(no_data_value)
+
+        for i in range(0, self.raster_count):
+            print "\t+ Working on band %d of %d..." % (i + 1, self.raster_count)
             bd = self.src_ds.GetRasterBand(i + 1)
-            bd.SetNoDataValue(-1000)
-            curr_stats = bd.ComputeStatistics(False)
-            print curr_stats
-            bd.SetNoDataValue(curr_stats[0])
-            new_stats = bd.ComputeStatistics(False)
-            print new_stats
-            bd.GetHistogram(new_stats[0], new_stats[1], self.BUCKET_COUNT, False, False)
+            bd.SetNoDataValue(self.INF)
+            stats = bd.ComputeStatistics(False)
+            #print stats
+            if no_data_value == '':
+                continue
+            if no_data_value == 'min':
+                bd.SetNoDataValue(stats[0])
+            elif no_data_value == 'max':
+                bd.SetNoDataValue(stats[1])
+            else:
+                bd.SetNoDataValue(no_data_value)
+            stats = bd.ComputeStatistics(False)
+            #print stats
+            bd.GetHistogram(stats[0], stats[1], self.BUCKET_COUNT, False, False)
+            #print
+
+    def build_overviews(self, ovr_type = 'NEAREST', ovr_levels = [2, 4, 6, 8, 10], verbose = False):
+        if verbose:
+            print "Building overviews..."
+        self.src_ds.BuildOverviews(resampling = ovr_type, overviewlist = ovr_levels, callback = ownprogress, callback_data = self.src_ds.RasterCount)
+
+    def consolidate_no_data_value(self, no_data_value):
+        # checking whether no data value was specified as either the minimum or
+        # maximum data value
+        if type(no_data_value) is StringType:
+            if no_data_value.lower() in ['min', 'max']:
+                no_data_value = no_data_value.lower()
+            # unsetting no data value otherwise
+            else:
+                no_data_value = ''
+        # checking whether specified no data value is a number
+        elif type(no_data_value) in [IntType, FloatType]:
+            pass
+        else:
+            no_data_value = ''
+
+        return no_data_value
 
     #def set_no_data_value(self, no_data_values = 0):
     #    raster_count = self.src_ds.RasterCount
@@ -71,30 +144,32 @@ class MetadataBuilder():
 
 if __name__ == '__main__':
     
+    pass
+    
     #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\orig\2011-09-14_apex_wahner_heide_4_orig.img"
     #src = r"D:\geo_data\ms.monina\satellite_data\worldview\2011-08-02_wahner_heide\2011-08-11_worldview_ms_wahner_heide.tif"
     #src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\orig\2007-07-02_ahs_kalmthoutse_heide_2_orig.img"
     #src = r"D:\tmp\ahs_6_reduced.img"
     #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\orig\2011-09-14_apex_wahner_heide_1_coverage.img"
     #src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex_final\georef\2011-09-14_wahner_heide_4_ms_georef.img"
-    src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig_3.img"
-    src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\work\2009-08-06_hymap_wahner_heide_mosaik_utm32.img"
-    src = r"Z:\tmp\mos\2009_wh_hy_envi_mos.img"
-    src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\georef\2009_08-06_hymap_wahner_heide_mos_first_envi.img"
-
-
-
-    src_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\ms"
-
-    import os
-    import glob
-    
-    for src in glob.glob(os.path.join(src_dir, '*.img')):
-        print src
-        mdb = MetadataBuilder(src)
-        mdb.set_statistics()
-        mdb.flush_metadata()
-
+    #src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig_3.img"
+    #src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\work\2009-08-06_hymap_wahner_heide_mosaik_utm32.img"
+    #src = r"Z:\tmp\mos\2009_wh_hy_envi_mos.img"
+    #src = r"D:\work\ms.monina\wp5\wahner_heide\2009-08-06_hymap\georef\2009_08-06_hymap_wahner_heide_mos_first_envi.img"
+    #
+    #
+    #
+    #src_dir = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\ms"
+    #
+    #import os
+    #import glob
+    #
+    #for src in glob.glob(os.path.join(src_dir, '*.img')):
+    #    print src
+    #    mdb = MetadataBuilder(src)
+    #    mdb.set_statistics()
+    #    mdb.flush_metadata()
+    #
     #mdb = MetadataBuilder(src)
     #mdb.set_statistics()
     #mdb.flush_metadata()
