@@ -97,12 +97,15 @@ class Spectrum(object):
         """
         self.attributes[attribute_id] = value
 
-    def __str__(self, include_no_data = True):
+    def __str__(self, include_no_data = True, include_source = True):
         u"""
         Returns a string representation of the spectrum, either with invalid
         data included or not.
         """
-        return_str = "\t".join([str(x) for x in [self.id, self.source, self.x, self.y]]) + "\t"
+        if include_source:
+            return_str = "\t".join([str(x) for x in [self.id, self.source, self.x, self.y]]) + "\t"
+        else:
+            return_str = "\t".join([str(x) for x in [self.id, self.x, self.y]]) + "\t"
         if include_no_data:
             return return_str + "\t".join(([str(v) for v in self.values.values()]))
         else:
