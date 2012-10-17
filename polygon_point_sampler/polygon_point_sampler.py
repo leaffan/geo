@@ -7,7 +7,8 @@
 # Creation Date: 2011/10/04 10:40:44
 
 u"""
-... Put description here ...
+A base class for creating sample points located in a given region of interest,
+i.e. polygon.
 """
 
 from shapely.geometry import Polygon
@@ -15,6 +16,11 @@ from shapely.geometry import Polygon
 class PolygonPointSampler(object):
     
     def __init__(self, polygon = ''):
+        u"""
+        Initialize a new PolygonPointSampler object using the specified polygon
+        object (as allocated by Shapely). If no polygon is given a new empty
+        one is created and set as the base polygon.
+        """
         if polygon:
             self.polygon = polygon
         else:
@@ -25,8 +31,8 @@ class PolygonPointSampler(object):
 
     def add_polygon(self, polygon):
         u"""
-        Adds another polygon entity by geometrically unifying it with the
-        current base polygon.
+        Add another polygon entity to the base polygon by geometrically unifying
+        it with the current one.
         """
         self.polygon = self.polygon.union(polygon)
         self.prepared = False
@@ -39,6 +45,11 @@ class PolygonPointSampler(object):
             print sample_pt
 
     def prepare_sampling(self):
+        u"""
+        Prepare the actual sampling procedure by splitting up the specified base
+        polygon (that may consist of multiple simple polygons) and appending its
+        compartments to a dedicated list.
+        """
         self.src = list()
         if hasattr(self.polygon, 'geoms'):
             for py in self.polygon:
@@ -48,4 +59,7 @@ class PolygonPointSampler(object):
         self.prepared = True
 
     def perform_sampling(self):
+        u"""
+        Create a stub for the actual sampling procedure.
+        """
         raise NotImplementedError

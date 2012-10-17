@@ -21,13 +21,14 @@ from _utils import ogr_utils
 if __name__ == '__main__':
     
     hnv_src = r"D:\work\veggeo\msave\2012_fieldsheet_update\data\NordOst_071211_HNV_fuer naechste Phase.csv"
+    hnv_src = r"D:\work\ms.monina\wp5\wahner_heide\field\plot_ids_coordinates_2009_refined.csv"
     
-    tgt_dir = r"d:\tmp"
-    tgt_shp = r"hnv2.shp"
+    tgt_dir = r"z:\create"
+    tgt_shp = r"2009.shp"
     
     sr = osr.SpatialReference()
     sr.SetWellKnownGeogCS("WGS84")
-    sr.SetUTM(33)
+    sr.SetUTM(32)
     
     tgt_path = os.path.join(tgt_dir, tgt_shp)
 
@@ -52,14 +53,13 @@ if __name__ == '__main__':
             val = record[fn]
         rec[new_fn] = val
     
-    
     csv_reader = csv.DictReader(open(hnv_src, 'rb'), delimiter = ";")
     
     ogr_utils.create_feature_definition_from_record(rec, tgt_ly)
     
     for row in csv_reader:
-        x = int(row['X_UTM33'])
-        y = int(row['Y_UTM33'])
+        x = float(row['x'])
+        y = float(row['y'])
         
         ft = ogr.Feature(tgt_ly.GetLayerDefn())
         
@@ -73,6 +73,4 @@ if __name__ == '__main__':
         #    print csv_reader.fieldnames[i], row[csv_reader.fieldnames[i]]
             ft.SetField(i, row[csv_reader.fieldnames[i]])
         tgt_ly.CreateFeature(ft)      
-        
-        
         

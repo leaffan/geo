@@ -15,9 +15,10 @@ from metadata_builder import MetadataBuilder
 if __name__ == '__main__':
     
     
-    src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_simulated_hymap\diff\2011_minus_2009_hymap_wahner_hei:de.img"
-    src = r"z:\tmp\diff\diff_mosaic.dat"
-    
+    src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_simulated_hymap\mos\2011-09-14_simulated_hymap_wahner_heide_mosaic_3m.img"
+    src = r"Z:\mos\1_sub_utm31.img"
+    src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig\2008-08-07_hymap_doeberitzer_heide_3_orig_good_bands_only.img"
+
     mdb = MetadataBuilder(src)
     
     mdb.build_statistics('min', verbose = True)

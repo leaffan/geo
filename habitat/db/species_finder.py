@@ -111,6 +111,8 @@ class SpeciesFinder():
             elif ratio == best_match[-1]:
                 if not sp_type: # i.e. not *(synomym)*,...
                     best_match = ((sp_name, sp_type, sp_url), ratio)
+            if ratio == 1.0:
+                return best_match
         else:
             if self.verbose:
                 print "+ Best match for '%s': '%s' %s [%s]" % (self.search_name, best_match[0][0], best_match[0][1], best_match[0][2])
@@ -227,8 +229,8 @@ class SpeciesFinder():
     def get_taxonomy(self, species_doc):
         taxonomic_rank = species_doc.xpath("//table[@class='datatable fullwidth']/tr/td")[1].text.strip().lower()
         
-        if not taxonomic_rank.lower().endswith("species"):
-            return None
+        #if not taxonomic_rank.lower().endswith("species"):
+        #    return None
         tax_info = species_doc.xpath("//table[@class='datatable fullwidth'][2]/tbody/tr")
         tax_dict = dict()
         

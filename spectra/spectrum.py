@@ -60,6 +60,8 @@ class Spectrum(object):
         """
         if self.values.has_key(band_id):
             return self.values[band_id]
+        else:
+            return None
     
     def set_value(self, band_id, value, overwrite = False):
         u"""
@@ -81,7 +83,6 @@ class Spectrum(object):
         u"""
         Declares the single band measurement of the specified band id as invalid.
         """
-        self.set_neighborhood(None)
         self.set_value(band_id, None)
 
     def get_attribute(self, attribute_id):
@@ -100,16 +101,18 @@ class Spectrum(object):
     def __str__(self, include_no_data = True, include_source = True):
         u"""
         Returns a string representation of the spectrum, either with invalid
-        data included or not.
+        data and/or the source image included or not.
         """
         if include_source:
-            return_str = "\t".join([str(x) for x in [self.id, self.source, self.x, self.y]]) + "\t"
+            prefix = "\t".join([str(x) for x in [self.id, self.source, self.x, self.y]])
         else:
-            return_str = "\t".join([str(x) for x in [self.id, self.x, self.y]]) + "\t"
+            prefix = "\t".join([str(x) for x in [self.id, self.x, self.y]])
         if include_no_data:
-            return return_str + "\t".join(([str(v) for v in self.values.values()]))
+            return "\t".join(([prefix] + [str(v) for v in self.values.values()]))
+            #return return_str + "\t".join(([str(v) for v in self.values.values()]))
         else:
-            return return_str + "\t".join(([str(v) for v in self.values.values() if v.__get__() is not None]))
+            return "\t".join(([prefix] + [str(v) for v in self.values.values() if v.__get__() is not None]))
+            #return return_str + "\t".join(([str(v) for v in self.values.values() if v.__get__() is not None]))
 
 class SingleBandMeasurement(object):
     

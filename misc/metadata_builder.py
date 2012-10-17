@@ -77,29 +77,39 @@ class MetadataBuilder():
                 else:
                     print "%f" % float(no_data_value)
 
+        if no_data_value and no_data_value in ['min', 'max']:
+            no_data_value = self.confirm_no_data_value(no_data_value)
+
         for i in range(0, self.raster_count):
             print "\t+ Working on band %d of %d..." % (i + 1, self.raster_count)
             bd = self.src_ds.GetRasterBand(i + 1)
-            bd.SetNoDataValue(self.INF)
-            stats = bd.ComputeStatistics(False)
-            #print stats
             if no_data_value == '':
-                continue
-            if no_data_value == 'min':
-                bd.SetNoDataValue(stats[0])
-            elif no_data_value == 'max':
-                bd.SetNoDataValue(stats[1])
+                bd.SetNoDataValue(self.INF)
             else:
                 bd.SetNoDataValue(no_data_value)
+            #if no_data_value == 'min':
+            #    bd.SetNoDataValue(stats[0])
+            #elif no_data_value == 'max':
+            #    bd.SetNoDataValue(stats[1])
+            #else:
+            #    bd.SetNoDataValue(no_data_value)
             stats = bd.ComputeStatistics(False)
-            #print stats
             bd.GetHistogram(stats[0], stats[1], self.BUCKET_COUNT, False, False)
-            #print
 
     def build_overviews(self, ovr_type = 'NEAREST', ovr_levels = [2, 4, 6, 8, 10], verbose = False):
         if verbose:
             print "Building overviews..."
         self.src_ds.BuildOverviews(resampling = ovr_type, overviewlist = ovr_levels, callback = ownprogress, callback_data = self.src_ds.RasterCount)
+
+    def confirm_no_data_value(self, type):
+        test_bd = self.src_ds.GetRasterBand(1)
+        stats = test_bd.ComputeStatistics(False)
+        ndv = 0.0
+        if type == 'min':
+            ndv = stats[0]
+        elif type == 'max':
+            ndv = stats[1]
+        return ndv
 
     def consolidate_no_data_value(self, no_data_value):
         # checking whether no data value was specified as either the minimum or
