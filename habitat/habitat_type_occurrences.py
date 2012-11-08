@@ -17,12 +17,14 @@ from db.n2k import *
 if __name__ == '__main__':
 
     tgt = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_eunis_characteristic_species_n2k_areas_germany_all.txt"
+    tgt = r"z:\bla.txt"
     output = list()
 
     session = Session()
     
     # retrieving all habitat types
     habitat_types = session.query(HabitatType).all()
+    habitat_types = session.query(HabitatType).filter(HabitatType.type_id == '2310').all()
     
     for ht in habitat_types[:]:
         habitat_type = ht.type_id
@@ -65,9 +67,38 @@ if __name__ == '__main__':
                 SpeciesOccurrence.species_id.in_(species_ids)
             )
         ).all()
-    
+        
         # reducing occurrences to corresponding map ids
         occurrence_map_ids = [occ.map_id for occ in occurrences]
+    
+        threshold = 3
+    
+        import collections
+        import sys
+        from operator import itemgetter
+        counter = collections.Counter(occurrence_map_ids)
+
+        print counter.most_common()
+
+        print type(counter)
+        
+        print len(counter)
+        xxx = [mi for mi in counter.items() if itemgetter(1)(mi) >= threshold]
+        print len(xxx)
+        
+        occurrence_map_ids = [itemgetter(0)(mi) for mi in xxx]
+        
+        #all_map_ids = list()
+        #double_map_ids = set()
+        #for mi in occurrence_map_ids:
+        #    if not mi in all_map_ids:
+        #        all_map_ids.append(mi)
+        #    else:
+        #        double_map_ids.add(mi)
+        #else:
+        #    print len(double_map_ids)
+    
+        #occurrence_map_ids = list(double_map_ids)
     
         print "# Habitat type %s (%s) present in the following sites:" % (habitat_type, ht.shortname)
         for site_id in site_ids:

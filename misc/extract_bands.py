@@ -20,7 +20,7 @@ from metadata_builder import MetadataBuilder
 
 if __name__ == '__main__':
     
-    img_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\roi\2007-07-02_ahs_kalmthoutse_heide_1_roi.dat"
+    img_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\mos\2007-07-02_ahs_kalmthoutse_heide_mosaic.img"
     bad_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\_info\2007-07-02_ahs_bad_bands.txt"
     
     tgt_path, ext = os.path.splitext(img_src)

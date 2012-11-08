@@ -40,6 +40,8 @@ class SpectraExtractor(object):
         self.tgt_dir = tgt_dir
         # setting neighborhood to 1 by default
         self.neighborhood = 1
+        # setting neighborhood type to square by default
+        self.neighborhood_type = 'square'
         # turning off calibration by default
         self.set_calibration()
         self.spectra = list()
@@ -51,6 +53,13 @@ class SpectraExtractor(object):
         extraction.
         """
         self.neighborhood = neighborhood
+
+    def set_neighborhood_type(self, neighborhood_type = 'square'):
+        u"""
+        Sets the neighborhood type that will be used for spectrum
+        extraction.
+        """
+        self.neighborhood_type = neighborhood_type
 
     def set_calibration(self, slope = 1, intercept = 0):
         u"""
@@ -74,7 +83,7 @@ class SpectraExtractor(object):
                 img_id = int(re.search("_(\d)_?", os.path.basename(f)).group(1))
                 self.image_data[img_id] = f
 
-    def retrieve_sample_locations(self, loc_id_field):
+    def retrieve_sample_locations(self, loc_id_field, additional_attributes = []):
         u"""
         Retrieve sampling locations by using the specified attribute in the
         previously defined location data source.
@@ -84,7 +93,7 @@ class SpectraExtractor(object):
         self.loc_ds = ogr.Open(self.loc_src)
         self.loc_ly = self.loc_ds.GetLayer(0)
         # caching locations
-        self.cached_locations = ogr_utils.cache_locations(self.loc_ly, [self.loc_id_field])
+        self.cached_locations = ogr_utils.cache_locations(self.loc_ly, [self.loc_id_field] + additional_attributes)
         self.cached_locations = sorted(self.cached_locations, key = itemgetter('attributes'))
 
     def retrieve_band_information(self, bad_src = ''):
@@ -108,14 +117,20 @@ class SpectraExtractor(object):
 
     def retrieve_coverage_information(self, cov_src = '', np = False):
         u"""
-        Retrieve coverage information, i.e. whehther locations to have spectra
+        Retrieve coverage information, i.e. whether locations to have spectra
         extracted have valid data and are not covered by clouds, margins etc.
         Information is retrieved from an external file.
         """
         self.coverage = dict()
         if self.img_src_dir is None and os.path.isfile(cov_src):
             for line in open(cov_src).readlines():
-                loc_id, coverage = [int(x.strip()) for x in line.split()]
+                if line.startswith("#"):
+                    continue
+                try:
+                    loc_id, coverage = [int(x.strip()) for x in line.split()]
+                except:
+                    tokens = line.split()
+                    loc_id, coverage = tokens[0], int(tokens[1])
                 self.coverage[loc_id] = coverage
         elif self.img_src is None and os.path.isfile(cov_src):
             if not np:
@@ -163,14 +178,18 @@ class SpectraExtractor(object):
         self.tgt_file = self.tgt_file.replace("__", "_")
         # adjusting target file name in accordance to the specified neighborhood
         if self.neighborhood > 1:
-            self.tgt_file = self.tgt_file.replace(".txt", "_%dx%d.txt" % tuple([self.neighborhood] * 2))
+            if self.neighborhood_type == 'square':
+                self.tgt_file = self.tgt_file.replace(".txt", "_%dx%d.txt" % tuple([self.neighborhood] * 2))
+            elif self.neighborhood_type == 'circle':
+                self.tgt_file = self.tgt_file.replace(".txt", "_circle_%d.txt" % self.neighborhood)
 
-    def extract(self, loc_id_field, img_bad_src = '', cov_src = '', neigborhood = 1, factor = 1):
+    def extract(self, loc_id_field, img_bad_src = '', cov_src = '', neighborhood = 1, factor = 1, add_attrs = [], nb_type = 'square'):
         self.retrieve_image_data(['.img'])
-        self.retrieve_sample_locations(loc_id_field)
+        self.retrieve_sample_locations(loc_id_field, add_attrs)
         self.retrieve_band_information(img_bad_src)
         self.retrieve_coverage_information(cov_src)
-        self.set_neighborhood(neigborhood)
+        self.set_neighborhood(neighborhood)
+        self.set_neighborhood_type(nb_type)
         self.set_calibration(factor)
         self.prepare_target()
         self.perform_extraction()
@@ -211,16 +230,22 @@ class SpectraExtractor(object):
         spectra = gdal_utils.extract_spectra(self.img_src, self.extract_locations,
                                              neighborhood = self.neighborhood,
                                              verbose = verbose, bad_bands = self.bad_bands,
-                                             scale_factor = self.slope)
+                                             scale_factor = self.slope, nb_type = self.neighborhood_type)
         # converting lists to spectrum objects
         # defining list of all extracted spectra
         # iterating over location/spectrum pairs
         for cp, sp in zip(self.extract_locations, spectra):
             # retrieving location id
+            if cp.has_key('attributes'):
+                additional_attributes = cp['attributes'].keys()
+                additional_attributes.remove(self.loc_id_field)
             loc_id = cp[self.loc_id_field]
             # creating new spectrum object using location id and according coordinates
             spectrum = Spectrum(loc_id, (cp['x'], cp['y']))
+            for aa in additional_attributes:
+                spectrum.set_attribute(aa, cp['attributes'][aa])
             spectrum.set_neighborhood(self.neighborhood)
+            spectrum.set_neighborhood_type(self.neighborhood_type)
             spectrum.set_source(self.img_id)
             if description_field:
                 spectrum.set_description(cp[description_field])
@@ -233,7 +258,7 @@ class SpectraExtractor(object):
             # adding current spectrum to list of all extracted spectra
             self.spectra.append(spectrum)
     
-    def dump_spectra(self, include_bad_bands = True):
+    def dump_spectra(self, include_bad_bands = True, include_raw_data = True):
         u"""
         Prepare output of extracted spectra data to an external file.
         """
@@ -245,7 +270,7 @@ class SpectraExtractor(object):
             output_bands = sorted(self.bad_bands + self.good_bands)
         else:
             output_bands = self.good_bands
-            
+        
         # if there is more than on source image, we'll include the origin of the
         # current spectra
         if len(self.image_data) > 1:
@@ -255,20 +280,30 @@ class SpectraExtractor(object):
 
         # iterating over all spectra and adding them to output
         for sp in sorted(self.spectra, key = attrgetter('id')):
-            output.append(sp.__str__(include_bad_bands, include_spectra_source))
+            output.append(sp.__str__(include_bad_bands, include_spectra_source, include_raw_data))
 
         # finally adding a header line
         header_items = [self.loc_id_field, "img_id", "x", "y"]
         if len(self.image_data) == 1:
             header_items.remove("img_id")
+        if self.spectra:
+            tmp_sp = self.spectra[0]
+        if len(tmp_sp.attributes) > 0:
+            for attr in sorted(tmp_sp.attributes.keys()):
+                header_items.append(attr)
+        if self.neighborhood_type == 'circle':
+            header_items.append("count")
         
         if self.neighborhood > 1:
             single_band_output = list()
             for band in output_bands:
                 if band in self.good_bands:
                     raw_output = list()
-                    for suff in general_utils.letter_generator(self.neighborhood * self.neighborhood):
-                        raw_output.append("%d_raw_%s" % (band, suff))
+                    if self.neighborhood_type == 'square':
+                        for suff in general_utils.letter_generator(self.neighborhood * self.neighborhood):
+                            raw_output.append("%d_raw_%s" % (band, suff))
+                    elif self.neighborhood_type == 'circle':
+                        raw_output.append("\t".join(("%d_min" % band, "%d_max" % band)))
                     single_band_output.append("%s\t%d_mean\t%d_std_dev" % ("\t".join(raw_output), band, band))
                 else:
                     single_band_output.append(str(band))
@@ -300,6 +335,5 @@ class SpectraExtractor(object):
     
 if __name__ == '__main__':
 
-    
-    se = SpectraExtractor(r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\reduced", r"D:\work\ms.monina\wp5\kalmthoutse_heide\field\kalmthoutse_heide_releve_plots.shp", r"z:\spectra")
+    pass    
 

@@ -37,13 +37,16 @@ if __name__ == '__main__':
     m_src = r"D:\work\ms.monina\wp4\shp\blattschnitte\mtb_utm32.shp"
     q_src = r"D:\work\ms.monina\wp4\shp\blattschnitte\mtbq_utm32.shp"
     
-    ht_src = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_eunis_characteristic_species_n2k_areas_germany_all.txt"
+    ht_src = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_eunis_characteristic_species_n2k_areas_germany_quadrants_mtbs.txt"
+    ht_src = r"Z:\2310_at_least_3.txt"
 
     d_src = r"D:\work\ms.monina\wp4\shp\wp4_environmental_data_coverage.shp"
     
     # source shapes for mtb/quadrant tiles intersected with data coverage
     md_src = r"D:\work\ms.monina\wp4\work\data_coverage_mtb_intersect.shp"
     qd_src = r"D:\work\ms.monina\wp4\work\data_coverage_mtbq_intersect.shp"
+    
+    tgt_path = r"d:\maxent_samples_prep_final_2310_3.csv"
     
     ht_map_ids = dict()
 
@@ -64,6 +67,7 @@ if __name__ == '__main__':
     wkt_output = list()
 
     for ht_id in sorted(ht_map_ids.keys()):
+    #for ht_id in ['2310']:
         ht_name = session.query(HabitatType).filter(HabitatType.type_id == ht_id).one().shortname
     
         print "Working on %s (%s)..." % (ht_id, ht_name)
@@ -108,6 +112,6 @@ if __name__ == '__main__':
         print "\t+ Found rep. points for %d map tiles overall (%d quadrant tiles, %d mtb tile(s))" % (m + q, q, m)
         print "===================================================================="
 
-    open(r"d:\maxent_prep_cent.csv", 'wb').write("\n".join(output))
+    open(tgt_path, 'wb').write("\n".join(output))
 
     #print "\n".join(wkt_output)
