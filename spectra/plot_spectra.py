@@ -49,10 +49,25 @@ if __name__ == '__main__':
     pkl_src = r"Z:\spectra\2009-08-06_hymap_wahner_heide_mos_first_envi_2012-11-05_115350_spectra.pkl"
     pkl_src = r"Z:\spectra\2011-09-14_apex_wahner_heide_mosaic_2012-11-06_123245_spectra.pkl"
     pkl_src = r"Z:\spectra\2011-09-14_apex_wahner_heide_mosaic_2012-11-06_123742_spectra.pkl"
+    pkl_src = r"z:\spectra\sp.pkl"
     #pkl_src = r"Z:\spectra\subset_uffing_2_2012-11-05_151842_spectra.pkl"
 
-    wl = numpy_utils.read_sensor_specs(apex_spec)[0]
+    wl = numpy_utils.read_sensor_specs(hymap_spec)[0]
     all_sp = pickle.load(open(pkl_src))
+
+    for sp in all_sp[:10]:
+        #values = sp.all_values()
+        print wl.shape
+        print np.array(sp[:-1]).shape
+        aline, = plt.plot(wl, sp[:-1], 'green')
+
+    plt.grid(True)
+    png_name = "all_sp.png"
+    plt.savefig(os.path.join(tgt_dir, png_name), dpi = 300)
+    print "done"
+
+    import sys
+    sys.exit()
 
     f_s = get_spectra_by_attribute(all_sp, 'type', 'f')
     for sp in f_s:

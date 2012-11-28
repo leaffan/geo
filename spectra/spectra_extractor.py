@@ -18,7 +18,7 @@ import pickle
 
 from operator import itemgetter, attrgetter
 from osgeo import ogr
-from numpy import loadtxt
+from numpy import loadtxt, genfromtxt
 
 from spectrum import Spectrum
 
@@ -68,7 +68,7 @@ class SpectraExtractor(object):
         between 0 and 1.
         """
         self.slope = slope
-        self.interecept = intercept
+        self.intercept = intercept
 
     def retrieve_image_data(self, img_fmt_types = []):
         u"""
@@ -146,19 +146,36 @@ class SpectraExtractor(object):
                         locations = [p.strip() for p in locations[1:-1].split(",")]
                     self.coverage[img_id] = locations
             else:
-                #TODO: use this as standard
-                cov_info = loadtxt(cov_src, unpack = True)
-                plots = cov_info[0]
-                plots_done = list()
-                for s in range(len(cov_info[1:])):
-                    self.coverage[s + 1] = list()
-                    for p in range(len(plots)):
-                        plot = int(plots[p])
-                        if plot in plots_done:
+                #TODO: use this as standard, get this stuff done!
+                try:
+                    cov_info = loadtxt(cov_src, unpack = True)
+                    plots = cov_info[0]
+                    plots_done = list()
+                    for s in range(len(cov_info[1:])):
+                        self.coverage[s + 1] = list()
+                        for p in range(len(plots)):
+                            try:
+                                plot = int(plots[p])
+                            except:
+                                plot = plots[p]
+                            if plot in plots_done:
+                                continue
+                            if cov_info[s + 1, p]:
+                                self.coverage[s + 1].append(plot) 
+                                #print s + 1, int(plots[p])
+                except:
+                    lines = open(cov_src).readlines()
+                    for line in lines:
+                        if line.startswith("#"):
                             continue
-                        if cov_info[s + 1, p]:
-                            self.coverage[s + 1].append(plot) 
-                            #print s + 1, int(plots[p])
+                        tokens = line.split()
+                        plot = tokens[0]
+                        for i in range(1, len(tokens)):
+                            if not self.coverage.has_key(i):
+                                self.coverage[i] = list()
+                            if int(tokens[i]):
+                                self.coverage[i].append(plot)
+                    print self.coverage
                 
 
     def prepare_target(self):
@@ -252,11 +269,14 @@ class SpectraExtractor(object):
             # adding values to spectrum
             for gb, val in zip(self.good_bands, sp):
                 spectrum.set_value(gb, val)
-            # adding values of bands to spectrum
+            # adding values of bad bands to spectrum
             for bb in self.bad_bands:
                 spectrum.set_invalid(bb)
             # adding current spectrum to list of all extracted spectra
             self.spectra.append(spectrum)
+    
+    def extract_roi_spectra(self):
+        
     
     def dump_spectra(self, include_bad_bands = True, include_raw_data = True):
         u"""
