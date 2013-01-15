@@ -50,47 +50,57 @@ if __name__ == '__main__':
     pkl_src = r"Z:\spectra\2011-09-14_apex_wahner_heide_mosaic_2012-11-06_123245_spectra.pkl"
     pkl_src = r"Z:\spectra\2011-09-14_apex_wahner_heide_mosaic_2012-11-06_123742_spectra.pkl"
     pkl_src = r"z:\spectra\sp.pkl"
+    pkl_src = r"Z:\spectra\2008-08-07_hymap_doeberitzer_heide_1_orig_2012-12-03_143230_spectra_polygons.pkl"
+    pkl_src = r"Z:\spectra\2008-08-07_hymap_doeberitzer_heide_1_orig_2012-12-03_144034_spectra_polygons.pkl"
     #pkl_src = r"Z:\spectra\subset_uffing_2_2012-11-05_151842_spectra.pkl"
 
     wl = numpy_utils.read_sensor_specs(hymap_spec)[0]
-    all_sp = pickle.load(open(pkl_src))
+    #all_sp = pickle.load(open(pkl_src))
 
-    for sp in all_sp[:10]:
-        #values = sp.all_values()
-        print wl.shape
-        print np.array(sp[:-1]).shape
-        aline, = plt.plot(wl, sp[:-1], 'green')
+    #for sp in all_sp:
+    #    #values = sp.all_values()
+    #    print wl.shape
+    #    print np.array(sp[:-1]).shape
+    #    aline, = plt.plot(wl, sp[:-1], 'green')
+    #
+    #plt.grid(True)
+    #png_name = "all_sp.png"
+    #plt.savefig(os.path.join(tgt_dir, png_name), dpi = 300)
+    #print "done"
+    #
+    #import sys
+    #sys.exit()
 
-    plt.grid(True)
-    png_name = "all_sp.png"
-    plt.savefig(os.path.join(tgt_dir, png_name), dpi = 300)
-    print "done"
-
-    import sys
-    sys.exit()
-
-    f_s = get_spectra_by_attribute(all_sp, 'type', 'f')
+    #f_s = get_spectra_by_attribute(all_sp, 'type', 'f')
+    f_s = pickle.load(open(r"z:\spectra\f.pkl"))
     for sp in f_s:
+        print "f:", sp.id
         values = sp.all_values()
-        aline, = plt.plot(wl, values, 'green')
-    nf_s = get_spectra_by_attribute(all_sp, 'type', 'nf')
+        aline, = plt.plot(wl, values[:-1], 'green', alpha = 0.15)
+    #nf_s = get_spectra_by_attribute(all_sp, 'type', 'nf')
+    nf_s = pickle.load(open(r"z:\spectra\nf.pkl"))
     for sp in nf_s:
+        print "nf:", sp.id
         values = sp.all_values()
-        aline, = plt.plot(wl, values, 'lime')
+        aline, = plt.plot(wl, values[:-1], 'lime', alpha = 0.15)
     else:
         #plt.xlim(x_min, x_max)
         plt.ylim(0, 0.5)
         #plt.title("Plot %d" % a1.id)
+        plt.title(u"Döberitzer Heide: 1180 forest vs. 515 non-forest plots")
         #plt.axvline(x = 0.505, color = 'b')
         #plt.axvline(x = 0.584, color = 'g')
         #plt.axvline(x = 0.678, color = 'r')
-        plt.axvline(x = 0.76, color = 'r')
-        plt.axvline(x = 0.81)
-        plt.axvline(x = 2.45)
-        plt.axvline(x = 1.28)
+        #plt.axvline(x = 0.76, color = 'r')
+        #plt.axvline(x = 0.81)
+        #plt.axvline(x = 2.45)
+        #plt.axvline(x = 1.28)
+        
+        plt.xlabel(r"${\lambda}$ [${\mu m}$]")
+        plt.ylabel("Reflectance")
         
         plt.grid(True)
-        png_name = "apex_nf_vs._f_bb.png"
+        png_name = "hymap_forest_vs._non-forest.png"
         plt.savefig(os.path.join(tgt_dir, png_name), dpi = 300)
         
 

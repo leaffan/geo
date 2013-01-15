@@ -34,9 +34,11 @@ class Spectrum(object):
         self.attributes = dict()
         # the pixel neighborhood for which the spectrum is valid
         self.neighborhood = 1
+        self.context_range = 1
         # the type of neighborhood for which the spectrum is valid, i.e.
         # 'square' or 'circle' neighborhood
         self.neighborhood_type = ''
+        self.context_type = ''
     
     def set_id(self, spectrum_id):
         u"""
@@ -56,6 +58,13 @@ class Spectrum(object):
         Set the pixel neighborhood for which the spectrum is taken.
         """
         self.neighborhood = neighborhood
+
+    def set_context_range(self, context_range = 1):
+        self.context_range = context_range
+    
+    def set_context_type(self, context_type = 'square'):
+        self.context_type = context_type
+        self.neighborhood_type = context_type
 
     def set_neighborhood_type(self, neighborhood_type):
         u"""
@@ -171,8 +180,18 @@ class SingleBandMeasurement(object):
             self.mean = value['mean']
             self.std_dev = value['std_dev']
             self.count = value['count']
-            self.neighborhood = value['neighborhood']
-            self.neighborhood_type = value['neighborhood_type'].lower()
+            if value.has_key('neighborhood'):
+                self.neighborhood = value['neighborhood']
+                self.context_range = self.neighborhood
+            if value.has_key('context_range'):
+                self.context_range = value['context_range']
+                self.neighborhood = self.context_range
+            if value.has_key('neighborhood_type'):
+                self.neighborhood_type = value['neighborhood_type'].lower()
+                self.context_type = self.neighborhood_type
+            if value.has_key('context_type'):
+                self.context_type = value['context_type']
+                self.neighborhood_type = self.context_type
         # otherwise we received a single value representing a single pixel
         else:
             self.raw = value

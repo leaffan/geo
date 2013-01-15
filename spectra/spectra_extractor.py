@@ -275,9 +275,6 @@ class SpectraExtractor(object):
             # adding current spectrum to list of all extracted spectra
             self.spectra.append(spectrum)
     
-    def extract_roi_spectra(self):
-        
-    
     def dump_spectra(self, include_bad_bands = True, include_raw_data = True):
         u"""
         Prepare output of extracted spectra data to an external file.

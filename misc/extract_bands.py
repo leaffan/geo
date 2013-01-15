@@ -11,17 +11,20 @@ u"""
 """
 
 import os
-
+import numpy as np
 from osgeo import gdal
 
 from _utils import gdal_utils
 
 from metadata_builder import MetadataBuilder
 
+
 if __name__ == '__main__':
     
     img_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\mos\2007-07-02_ahs_kalmthoutse_heide_mosaic.img"
+    img_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\mos\2011-09-14_apex_wahner_heide_mosaic.img"
     bad_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\_info\2007-07-02_ahs_bad_bands.txt"
+    bad_src = r"D:\work\ms.monina\wp5\wahner_heide\2011-09-14_apex\_info\2011-09-14_apex_bad_bands.txt"
     
     tgt_path, ext = os.path.splitext(img_src)
     
@@ -39,6 +42,7 @@ if __name__ == '__main__':
     
     band_count = gdal_utils.get_band_count(img_src)
     bad_bands = [int(b) for b in open(bad_src).readlines()[1].split("\t")]
+    bad_bands = np.loadtxt(bad_src)
     good_bands = list(set(range(1, band_count + 1)).difference(bad_bands))
     
     print "Creating target dataset '%s'..." % tgt_path
