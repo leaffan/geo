@@ -570,13 +570,17 @@ if __name__ == '__main__':
     img_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig\2008-08-07_hymap_doeberitzer_heide_1_orig.img"
     #img_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\orig"
     #img_src = r"D:\work\ms.monina\wp5\kalmthoutse_heide\2007-07-02_ahs\orig"
-    vct_src = r"Z:\fabi\msave\_wet.shp"
+    img_src = r"D:\tmp\kh_fabi_analysis\kh_mosaic_subset.img"
+
+    vct_src = r"D:\tmp\kh_fabi_analysis\sample_polygons.shp"
+    #vct_src = r"Z:\fabi\shp\_nf.shp"
     #vct_src = r"Z:\fabi\msave\_line_test.shp"
     #vct_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\field\doeberitzer_heide_releve_plots.shp"
-    vct_src = r"z:\fabi\shp\_nf_orig_pnt.shp"
+    #vct_src = r"z:\fabi\shp\_nf_orig_pnt.shp"
     
-    bad_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_bad_bands_.txt"
+    #bad_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_bad_bands_.txt"
     #o_bad_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_bad_bands.txt"
+    bad_src = ''
     
     cov_src = ''
     #cov_src = r"D:\work\ms.monina\wp5\doeberitzer_heide\2008-08-07_hymap\_info\2008-08-07_hymap_strip_plot_id_linkage_unique.txt"
@@ -598,4 +602,4 @@ if __name__ == '__main__':
     se.prepare_target()
     se.extract_spectra()
     se.dump_spectra(False)
-    se.export_spectra()
+    #se.export_spectra()
