@@ -126,8 +126,24 @@ class Site(Base):
     def __init__(self):
         pass
 
-class SpeciesOccurrence(Base):
-    __tablename__ = 'fk_occurrences'
+#class SpeciesOccurrence(Base):
+#    __tablename__ = 'fk_occurrences'
+#    __autoload__ = True
+#    __table_args__ = {'autoload_with': Engine}
+#
+#    def __init__(self):
+#        pass
+
+class QuadSpeciesOccurrence(Base):
+    __tablename__ = 'quad_species_occurrences'
+    __autoload__ = True
+    __table_args__ = {'autoload_with': Engine}
+
+    def __init__(self):
+        pass
+
+class MtbSpeciesOccurrence(Base):
+    __tablename__ = 'mtb_species_occurrences'
     __autoload__ = True
     __table_args__ = {'autoload_with': Engine}
 
@@ -142,8 +158,24 @@ class BioGeographicalRegion(Base):
     def __init__(self):
         pass
 
-class SiteMapIntersect(Base):
-    __tablename__ = 'sites_map'
+#class SiteMapIntersect(Base):
+#    __tablename__ = 'sites_map'
+#    __autoload__ = True
+#    __table_args__ = {'autoload_with': Engine}
+#
+#    def __init__(self):
+#        pass
+
+class SiteOnMtbTile(Base):
+    __tablename__ = 'sites_on_mtb_tiles'
+    __autoload__ = True
+    __table_args__ = {'autoload_with': Engine}
+
+    def __init__(self):
+        pass
+
+class SiteOnQuadTile(Base):
+    __tablename__ = 'sites_on_quad_tiles'
     __autoload__ = True
     __table_args__ = {'autoload_with': Engine}
 

@@ -17,13 +17,14 @@ from osgeo import ogr
 
 if __name__ == '__main__':
     
-    spc_src = r"D:\work\ms.monina\wp4\eunis_ht_characteristic_species_germany.txt"
-    src_dir = r"D:\work\ms.monina\wp4\shp\florkart"
+    spc_src = r"y:\work\ms.monina\wp4\eunis_ht_characteristic_species_germany.txt"
+    src_dir = r"y:\work\ms.monina\wp4\shp\florkart"
     
     shp_dict = dict()
 
     for f in os.listdir(src_dir):
         if os.path.splitext(f)[-1] == ".shp":
+            print f
             src_shp = os.path.join(src_dir, f)
             ds = ogr.Open(src_shp)
             ly = ds.GetLayer(0)

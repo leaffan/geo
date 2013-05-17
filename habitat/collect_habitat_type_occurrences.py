@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
+# File: collect_habitat_type_occurrences.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/07/02 12:55:22

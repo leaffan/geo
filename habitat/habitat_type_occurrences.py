@@ -53,18 +53,18 @@ if __name__ == '__main__':
         species_ids = [typical_sp.species_id for typical_sp in typical_species]
     
         # retrieving all map tiles that intersect with the previously retrieved sites
-        map_intersects = session.query(SiteMapIntersect).filter(
-            SiteMapIntersect.site_id.in_(site_ids)).all()
+        map_intersects = session.query(SiteOnQuadTile).filter(
+            SiteOnQuadTile.site_id.in_(site_ids)).all()
     
         # reducing map tiles to map ids
         map_ids = [map_intersect.map_id for map_intersect in map_intersects]
     
         # retrieving all Florkart occurrences with one of the specified map ids and
         # one of the specified species
-        occurrences = session.query(SpeciesOccurrence).filter(
+        occurrences = session.query(QuadSpeciesOccurrence).filter(
             and_(
-                SpeciesOccurrence.map_id.in_(map_ids),
-                SpeciesOccurrence.species_id.in_(species_ids)
+                QuadSpeciesOccurrence.map_id.in_(map_ids),
+                QuadSpeciesOccurrence.species_id.in_(species_ids)
             )
         ).all()
         

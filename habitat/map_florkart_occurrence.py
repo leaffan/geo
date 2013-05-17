@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
+# File: map_florkart_occurrence.py
 # Author: Markus Reinhold
 # Contact: leaffan@gmx.net
 # Creation Date: 2012/04/11 15:22:05
 
 u"""
-... Put description here ...
+Takes a list of species occurrences with accompanying tile ids (both mtbs and
+quadrants) and maps these occurrences to a corresponding shape file, one for
+each examined species.
 """
 import os
 from collections import OrderedDict
@@ -63,19 +65,19 @@ def convert_feature(src_ft, tgt_ly, occurrence_dict):
 
 if __name__ == '__main__':
     
-    tk25_src = r"D:\work\ms.monina\wp4\shp\blattschnitte\mtb_utm32.shp"
-    quad_src = r"D:\work\ms.monina\wp4\shp\blattschnitte\mtbq_utm32.shp"
-    spec_src = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_habdir_annex_species_germany.txt"
+    tk25_src = r"Z:\work\ms.monina\wp4\shp\blattschnitte\mtb_utm32.shp"
+    quad_src = r"Z:\work\ms.monina\wp4\shp\blattschnitte\mtbq_utm32.shp"
+    spec_src = r"Z:\work\ms.monina\wp4\florkart_2012_occurrences_habdir_annex_species_germany.txt"
     #spec_src = r"D:\work\ms.monina\wp4\florkart_2012_occurrences_eunis_characteristic_species_germany.txt"
     tgt_dir = r"D:\work\ms.monina\wp4\shp\florkart"
-    #tgt_dir = r"d:\tmp"
+    tgt_dir = r"d:\tmp\fk"
     
+    # creating look up tables to speed up tile id retrieval
     tk25_id_lut = build_id_lookup_table(tk25_src, 'id')
     quad_id_lut = build_id_lookup_table(quad_src, 'id')
+    # creating look up table to speed up species occurrence retrieval
     species_lut = build_species_lookup_table(spec_src)
 
-    keys = ['Molinia caerulea']
-    
     record = OrderedDict()
     record['species'] = ''
     record['tk25_id'] = ''
@@ -84,36 +86,44 @@ if __name__ == '__main__':
     record['x'] = float(0)
     record['y'] = float(0)
     
+    # opening tile sources
     tk25_ds = ogr.Open(tk25_src)
     tk25_ly = tk25_ds.GetLayer(0)
-
     quad_ds = ogr.Open(quad_src)
     quad_ly = quad_ds.GetLayer(0)
     
+    # iterating over all species
     for key in species_lut:
         print "Working on '%s'..." % key
-        data = species_lut[key]
+        # retrieving occurrence data for current species
+        occ_data = species_lut[key]
         quad_ids = set()
         tk25_ids = set()
         tmp_ids = set()
         all_occ = dict()
         
-        if len(data[0]) == 3:
-            suffix = data[0][-1]
+        if len(occ_data[0]) == 3:
+            suffix = occ_data[0][-1]
             record['suffix'] = ''
         else:
             suffix = ''
 
+        # creating target shape file for current species
         tgt_file = key.lower().replace(" ", "_") + ".shp"
         tgt_shp = os.path.join(tgt_dir, tgt_file)
         tgt_ds, tgt_ly = ogr_utils.create_shapefile(tgt_shp, ogr.wkbPolygon, tk25_ly.GetSpatialRef())
         ogr_utils.create_feature_definition_from_record(record, tgt_ly)
         
-        for entry in sorted(data, key = itemgetter(0), reverse = False):
-            quad_location, symbol = entry[:2] 
+        # iterating over all occurrences for current species
+        for entry in sorted(occ_data, key = itemgetter(0), reverse = False):
+            # retrieving location by quadrant id and symbol
+            quad_location, symbol = entry[:2]
+            # extracting mtb location by extracting it from quad location
             tk25_location = quad_location[:-1]
+            # setting quadrant, i.e. 1, 2, 3 or 4
             quadrant = quad_location[-1]
  
+            # using dictionary to hold occurrence information
             occ_dict = dict()
             occ_dict['species'] = key
             occ_dict['symbol'] = symbol
@@ -125,7 +135,7 @@ if __name__ == '__main__':
             if int(quadrant) != 0:
                 if quad_location in quad_ids:
                     print "\tquad location '%s' already mapped..." % quad_location
-                else:
+                else:l
                     quad_ids.add(quad_location)
                     if tk25_location in tk25_ids:
                         tk25_ids.remove(tk25_location)

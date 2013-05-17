@@ -93,8 +93,16 @@ class DbSitesHabitatTypes(Base):
     def __init__(self):
         pass
 
-class DbFkOccurrence(Base):
-    __tablename__ = 'fk_occurrences'
+class DbQuadSpeciesOccurrence(Base):
+    __tablename__ = 'quad_species_occurrences'
+    __autoload__ = True
+    __table_args__ = {'autoload_with': Engine}
+
+    def __init__(self):
+        pass
+
+class DbMtbSpeciesOccurrence(Base):
+    __tablename__ = 'mtb_species_occurrences'
     __autoload__ = True
     __table_args__ = {'autoload_with': Engine}
 
@@ -109,8 +117,16 @@ class DbSite(Base):
     def __init__(self):
         pass
 
-class DbSitesMap(Base):
-    __tablename__ = 'sites_map'
+class DbSiteOnMtbTile(Base):
+    __tablename__ = 'sites_on_mtb_tiles'
+    __autoload__ = True
+    __table_args__ = {'autoload_with': Engine}
+
+    def __init__(self):
+        pass
+
+class DbSiteOnQuadTile(Base):
+    __tablename__ = 'sites_on_quad_tiles'
     __autoload__ = True
     __table_args__ = {'autoload_with': Engine}
 
@@ -140,12 +156,15 @@ if __name__ == '__main__':
     species_ids = [f(typical_sp) for typical_sp in typical_species]
 
     # retrieving all map tiles that intersect with the previously retrieved sites
-    map_ids = session.query(DbSitesMap).filter(
-        DbSitesMap.site_id.in_(site_ids)).all()
+    map_ids = session.query(DbSiteOnQuadTile).filter(
+        DbSiteOnQuadTile.site_id.in_(site_ids)).all()
 
     # reducing map tiles to map ids
     f = attrgetter('map_id')
     map_ids = [f(map_id) for map_id in map_ids]
+
+    import sys
+    sys.exit()
 
     # retrieving all Florkart occurrences with one of the specified map ids and
     # one of the specified species

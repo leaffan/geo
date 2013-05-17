@@ -10,9 +10,7 @@ u"""
 ... Put description here ...
 """
 
-
 from habitat import Species, SpeciesFinder
-
 
 if __name__ == '__main__':
     

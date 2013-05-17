@@ -16,7 +16,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from _utils.cfg_utility import CfgUtility
 
-cfg = CfgUtility(r"D:\pgsql_pinguicula.cfg")
+cfg = CfgUtility(r"Z:\pgsql_pinguicula.cfg")
 
 db_engine = cfg.get_value('db_engine')
 user = cfg.get_value('user')
