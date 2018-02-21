@@ -1,61 +1,53 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# File: ....py
-# Author: Markus Reinhold
-# Contact: leaffan@gmx.net
-# Creation Date: 2012/03/13 13:10:54
+import time
+from shapely.geometry import Polygon
+from shapely.wkt import loads
 
-u"""
-... Put description here ...
-"""
-
-from sampler import CentroidSampler, LabelPointSampler, RegularGridSampler, UniformRandomSampler, SkeletonLineSampler
+from sampler import CentroidSampler
+from sampler import RepresentativePointSampler
+from sampler import RegularGridSampler
+from sampler import UniformRandomSampler
+from sampler import SkeletonLineSampler
 
 if __name__ == '__main__':
 
-    import time    
-    from shapely.geometry import Polygon
-    from shapely.wkt import loads
-
     py = Polygon(((0., 0.), (0., 1.), (1., 1.), (1., 0.)))
 
-    wkt_src = r"D:\work\_misc\triangulation_sampling\wkt\p.txt"
+    wkt_src = R"_data\p.txt"
     py = loads(open(wkt_src).read())
+    print(py)
 
     t0 = time.time()
 
-    print "Centroid sampling:"
+    print("Centroid sampling:")
     cs = CentroidSampler(py)
     cs.perform_sampling()
-    for s in cs.samples:
-        print "\t", s
-    
-    print "Label point sampling:"
-    ls = LabelPointSampler(py)
+    cs.print_samples()
+
+    print("Representative point sampling:")
+    ls = RepresentativePointSampler(py)
     ls.perform_sampling()
-    for s in ls.samples:
-        print "\t", s
-    
-    print "Regular grid sampling:"
+    ls.print_samples()
+
+    print("Regular grid sampling:")
     rs = RegularGridSampler(py, 500, 500)
     rs.perform_sampling()
-    for s in rs.samples:
-        print "\t", s
-    
-    print "Uniform random sampling:"
+    rs.print_samples()
+
+    print("Uniform random sampling:")
     us = UniformRandomSampler(py, 25)
-    #us.set_sample_count(500)
+    # us.set_sample_count(500)
     us.perform_sampling()
-    for s in us.samples:
-        print "\t", s
-    
-    #us.print_triangles()
-    
-    print "Skeleton line sampling:"
+    us.print_samples()
+
+    # us.print_triangles()
+
+    print("Skeleton line sampling:")
     sls = SkeletonLineSampler(py)
     sls.perform_sampling()
-    for s in sls.samples:
-        print "\t", s
+    sls.print_samples()
+    print(sls.skel)
 
-    print "elapsed time: %f" % (time.time() - t0)
+    print("elapsed time: %f" % (time.time() - t0))
